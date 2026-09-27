@@ -119,6 +119,19 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
@@ -210,7 +223,7 @@ TextureImporter:
       name: Green_4
       rect:
         serializedVersion: 2
-        x: 256
+        x: 128
         y: 0
         width: 32
         height: 32
@@ -231,7 +244,7 @@ TextureImporter:
       name: Green_5
       rect:
         serializedVersion: 2
-        x: 288
+        x: 160
         y: 0
         width: 32
         height: 32
@@ -252,7 +265,7 @@ TextureImporter:
       name: Green_6
       rect:
         serializedVersion: 2
-        x: 320
+        x: 192
         y: 0
         width: 32
         height: 32
@@ -273,7 +286,7 @@ TextureImporter:
       name: Green_7
       rect:
         serializedVersion: 2
-        x: 352
+        x: 224
         y: 0
         width: 32
         height: 32
@@ -294,7 +307,7 @@ TextureImporter:
       name: Green_8
       rect:
         serializedVersion: 2
-        x: 384
+        x: 256
         y: 0
         width: 32
         height: 32
@@ -315,7 +328,7 @@ TextureImporter:
       name: Green_9
       rect:
         serializedVersion: 2
-        x: 416
+        x: 288
         y: 0
         width: 32
         height: 32
@@ -336,7 +349,7 @@ TextureImporter:
       name: Green_10
       rect:
         serializedVersion: 2
-        x: 448
+        x: 320
         y: 0
         width: 32
         height: 32
@@ -357,7 +370,7 @@ TextureImporter:
       name: Green_11
       rect:
         serializedVersion: 2
-        x: 480
+        x: 352
         y: 0
         width: 32
         height: 32
@@ -370,6 +383,90 @@ TextureImporter:
       bones: []
       spriteID: 82ea7a96f1a18ae428725916c63acbfb
       internalID: 919176953
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Green_12
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 831ef1ccf5a3acf40aa9b828a4145f35
+      internalID: -173686667
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Green_13
+      rect:
+        serializedVersion: 2
+        x: 416
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: df612d7c18803744faeb805128e271b7
+      internalID: -954239383
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Green_14
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 968d2d1134c7e9a4499306282574334c
+      internalID: -1938016816
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Green_15
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 40ca526e1898d0f4690530c83fa4e842
+      internalID: -1376006776
       vertices: []
       indices: 
       edges: []
@@ -389,6 +486,10 @@ TextureImporter:
       Green_1: -715519679
       Green_10: 313193019
       Green_11: 919176953
+      Green_12: -173686667
+      Green_13: -954239383
+      Green_14: -1938016816
+      Green_15: -1376006776
       Green_2: 407171800
       Green_3: -577999795
       Green_4: 341002773

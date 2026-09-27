@@ -119,6 +119,19 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
@@ -210,7 +223,7 @@ TextureImporter:
       name: Brown_4
       rect:
         serializedVersion: 2
-        x: 256
+        x: 128
         y: 0
         width: 32
         height: 32
@@ -231,7 +244,7 @@ TextureImporter:
       name: Brown_5
       rect:
         serializedVersion: 2
-        x: 288
+        x: 160
         y: 0
         width: 32
         height: 32
@@ -252,7 +265,7 @@ TextureImporter:
       name: Brown_6
       rect:
         serializedVersion: 2
-        x: 320
+        x: 192
         y: 0
         width: 32
         height: 32
@@ -273,7 +286,7 @@ TextureImporter:
       name: Brown_7
       rect:
         serializedVersion: 2
-        x: 352
+        x: 224
         y: 0
         width: 32
         height: 32
@@ -294,7 +307,7 @@ TextureImporter:
       name: Brown_8
       rect:
         serializedVersion: 2
-        x: 384
+        x: 256
         y: 0
         width: 32
         height: 32
@@ -315,7 +328,7 @@ TextureImporter:
       name: Brown_9
       rect:
         serializedVersion: 2
-        x: 416
+        x: 288
         y: 0
         width: 32
         height: 32
@@ -336,7 +349,7 @@ TextureImporter:
       name: Brown_10
       rect:
         serializedVersion: 2
-        x: 448
+        x: 320
         y: 0
         width: 32
         height: 32
@@ -357,7 +370,7 @@ TextureImporter:
       name: Brown_11
       rect:
         serializedVersion: 2
-        x: 480
+        x: 352
         y: 0
         width: 32
         height: 32
@@ -370,6 +383,90 @@ TextureImporter:
       bones: []
       spriteID: c8b257746c39a5040a566fc5bc05c9ae
       internalID: 2144471233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Brown_12
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6659138886ba3c24c920e4be4983a915
+      internalID: 258239870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Brown_13
+      rect:
+        serializedVersion: 2
+        x: 416
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 167682b90d52da44fb439af8fb3cff7e
+      internalID: -1815258671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Brown_14
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e0a9ef95e26aae84ca69c3ac04b7b7f2
+      internalID: 912854596
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Brown_15
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 32
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7921b3c8436d8e469dca16b141c12ab
+      internalID: 766652795
       vertices: []
       indices: 
       edges: []
@@ -389,6 +486,10 @@ TextureImporter:
       Brown_1: 124489296
       Brown_10: -1017775077
       Brown_11: 2144471233
+      Brown_12: 258239870
+      Brown_13: -1815258671
+      Brown_14: 912854596
+      Brown_15: 766652795
       Brown_2: 149928987
       Brown_3: 1233038199
       Brown_4: -1933240528
