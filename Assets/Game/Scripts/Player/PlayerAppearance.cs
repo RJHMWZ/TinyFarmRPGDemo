@@ -8,6 +8,10 @@ using UnityEngine;
 /// </summary>
 public class PlayerAppearance : MonoBehaviour
 {
+    // 缓存最近显示的动画状态，换装后可以立即重绘，而不必等待动画控制器下一帧。
+    private PlayerAnimationType currentAnimation = PlayerAnimationType.Idle;
+    private PlayerDirection currentDirection = PlayerDirection.Down;
+    private int currentFrameIndex;
     [Header("SpriteRenderer")]
 
     [Tooltip("身体/肤色图层的 SpriteRenderer。")]
@@ -50,6 +54,9 @@ public class PlayerAppearance : MonoBehaviour
     /// </summary>
     public void SetFrame(PlayerAnimationType animationType, PlayerDirection direction, int frameIndex)
     {
+        currentAnimation = animationType;
+        currentDirection = direction;
+        currentFrameIndex = frameIndex;
         SetPart(skinRenderer,skin,animationType,direction,frameIndex);
 
         SetPart(clothesRenderer,clothes,animationType,direction,frameIndex);
@@ -119,5 +126,11 @@ public class PlayerAppearance : MonoBehaviour
     public void SetAccessory(PlayerPartAnimationSet newAccessory)
     {
         accessory = newAccessory;
+    }
+
+    /// <summary>换装完成后，使用缓存状态立即刷新所有图层。</summary>
+    public void RefreshCurrentFrame()
+    {
+        SetFrame(currentAnimation, currentDirection, currentFrameIndex);
     }
 }
