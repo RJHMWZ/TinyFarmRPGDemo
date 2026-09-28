@@ -1,9 +1,16 @@
 using UnityEngine;
 
+/// <summary>
+/// 管理角色的分层外观，并把同一动画帧设置到各层 SpriteRenderer。
+///
+/// 角色不是一张完整图片，而是由皮肤、衣服、眼睛、头发、饰品五张透明图片
+/// 按相同位置和顺序叠加而成。换装只需替换其中一层的 PlayerPartAnimationSet。
+/// </summary>
 public class PlayerAppearance : MonoBehaviour
 {
     [Header("SpriteRenderer")]
 
+    [Tooltip("身体/肤色图层的 SpriteRenderer。")]
     [SerializeField]
     private SpriteRenderer skinRenderer;
 
@@ -20,7 +27,7 @@ public class PlayerAppearance : MonoBehaviour
     private SpriteRenderer accessoryRenderer;
 
 
-    [Header("当前角色外观")]
+    [Header("当前角色外观（每层各自的动画帧资源）")]
     [SerializeField]
     private PlayerPartAnimationSet skin;
 
@@ -38,9 +45,10 @@ public class PlayerAppearance : MonoBehaviour
 
 
     /// <summary>
-    /// 刷新角色当前帧
+    /// 刷新整个角色的当前帧。
+    /// 所有外观层必须使用相同的动画类型、朝向和帧序号，叠加时才不会错位。
     /// </summary>
-    public void SetFrame(PlayerAnimationType animationType,PlayerDirection direction,int frameIndex)
+    public void SetFrame(PlayerAnimationType animationType, PlayerDirection direction, int frameIndex)
     {
         SetPart(skinRenderer,skin,animationType,direction,frameIndex);
 
@@ -54,21 +62,26 @@ public class PlayerAppearance : MonoBehaviour
     }
 
 
-    private void SetPart(SpriteRenderer renderer,PlayerPartAnimationSet animationSet,PlayerAnimationType animationType,PlayerDirection direction,int frameIndex)
+    /// <summary>刷新一个外观层；未装备该层时清空其图片。</summary>
+    private void SetPart(SpriteRenderer renderer, PlayerPartAnimationSet animationSet, PlayerAnimationType animationType, PlayerDirection direction, int frameIndex)
     {
-        if (renderer == null)return;
+        // 某些角色可以没有饰品等可选图层，因此允许 Renderer 没有配置。
+        if (renderer == null) return;
 
         if (animationSet == null)
         {
+            // 换装时传入 null 代表卸下该部件，必须清空旧 Sprite。
             renderer.sprite = null;
             return;
         }
-        renderer.sprite =animationSet.GetSprite(animationType,direction,frameIndex);
+
+        renderer.sprite = animationSet.GetSprite(animationType, direction, frameIndex);
     }
 
 
     /// <summary>
-    /// 获取动画帧数量
+    /// 获取动画帧数量。
+    /// 当前以 skin 为基准，其他外观部件应与 skin 使用相同的每方向帧数。
     /// </summary>
     public int GetFrameCount(PlayerAnimationType animationType)
     {
@@ -80,7 +93,8 @@ public class PlayerAppearance : MonoBehaviour
 
 
     // =========================
-    // 换装接口
+    // 换装接口：只替换资源引用；下一次 SetFrame 时新部件就会显示。
+    // 如果希望点击换装后立刻可见，调用方可随后要求动画控制器刷新当前帧。
     // =========================
     public void SetSkin(PlayerPartAnimationSet newSkin)
     {
