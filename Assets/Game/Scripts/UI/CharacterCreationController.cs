@@ -223,7 +223,7 @@ public sealed class CharacterCreationController : MonoBehaviour
         if (row.Options.Count == 0)
         {
             profile.SetPartId(row.Category, string.Empty);
-            if (row.Number != null) row.Number.text = "0/0";
+            if (row.Number != null) row.Number.text = "0";
             UpdatePreview(row.Category, null);
             return;
         }
@@ -231,7 +231,7 @@ public sealed class CharacterCreationController : MonoBehaviour
         row.Index = (row.Index + delta + row.Options.Count) % row.Options.Count;
         CharacterAppearanceDatabase.Entry entry = row.Options[row.Index];
         profile.SetPartId(row.Category, entry.Id);
-        if (row.Number != null) row.Number.text = string.Format("{0}/{1}", row.Index + 1, row.Options.Count);
+        if (row.Number != null) row.Number.text = (row.Index + 1).ToString();
         UpdatePreview(row.Category, entry.AnimationSet);
         ApplyTo(targetAppearance);
     }
