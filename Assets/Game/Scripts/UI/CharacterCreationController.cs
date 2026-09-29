@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -38,6 +39,10 @@ public sealed class CharacterCreationController : MonoBehaviour
     [SerializeField] private Image femaleBackground;
     [SerializeField] private Color selectedGenderColor = Color.white;
     [SerializeField] private Color normalGenderColor = new Color(0.72f, 0.72f, 0.72f, 1f);
+    [Header("Start Game Transition")]
+    [Tooltip("Seconds used for both the fade to black and the fade back to the game.")]
+    [Min(0.01f)]
+    [SerializeField] private float fadeDuration = 0.6f;
     [Tooltip("角色数据保存并应用完成后触发，可在 Inspector 中连接场景切换等后续流程。")]
     [SerializeField] private UnityEvent onConfirmed;
 
@@ -48,6 +53,10 @@ public sealed class CharacterCreationController : MonoBehaviour
         new Dictionary<PlayerAppearanceCategory, Image>();
     private CharacterCreationProfile profile;
     private bool initialized;
+    private bool isConfirming;
+    private Button startGameButton;
+    private PlayerMovement playerMovement;
+    private bool playerMovementWasEnabled;
 
     /// <summary>供后续创建存档、进入游戏等系统读取尚未或已经确认的角色资料。</summary>
     public CharacterCreationProfile CurrentProfile => profile;
@@ -98,6 +107,7 @@ public sealed class CharacterCreationController : MonoBehaviour
 
         BuildRows();
         SetGender(profile.gender);
+        LockPlayerMovement();
         initialized = true;
     }
 
@@ -131,14 +141,98 @@ public sealed class CharacterCreationController : MonoBehaviour
     /// </summary>
     public void Confirm()
     {
+        if (isConfirming || profile == null) return;
+        isConfirming = true;
+        if (startGameButton != null) startGameButton.interactable = false;
+
         if (nameInput != null) profile.playerName = nameInput.text.Trim();
         if (string.IsNullOrWhiteSpace(profile.playerName))
         {
             RandomizeName();
         }
         CharacterCreationSave.Save(profile);
+        StartCoroutine(CompleteCharacterCreation());
+    }
+
+    private IEnumerator CompleteCharacterCreation()
+    {
+        Image fadeOverlay = CreateFadeOverlay();
+        if (fadeOverlay == null)
+        {
+            FinishCharacterCreation();
+            yield break;
+        }
+
+        yield return Fade(fadeOverlay, 0f, 1f);
+
+        ApplyTo(targetAppearance);
+
+        CanvasGroup panelGroup = GetComponent<CanvasGroup>();
+        if (panelGroup == null) panelGroup = gameObject.AddComponent<CanvasGroup>();
+        panelGroup.alpha = 0f;
+        panelGroup.interactable = false;
+        panelGroup.blocksRaycasts = false;
+
+        yield return Fade(fadeOverlay, 1f, 0f);
+
+        UnlockPlayerMovement();
+        Destroy(fadeOverlay.gameObject);
+        onConfirmed?.Invoke();
+        Destroy(gameObject);
+    }
+
+    private IEnumerator Fade(Image overlay, float from, float to)
+    {
+        float duration = Mathf.Max(0.01f, fadeDuration);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            SetImageAlpha(overlay, Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration)));
+            yield return null;
+        }
+        SetImageAlpha(overlay, to);
+    }
+
+    private Image CreateFadeOverlay()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return null;
+
+        GameObject overlayObject = new GameObject(
+            "CharacterCreationFade",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image));
+        overlayObject.layer = canvas.gameObject.layer;
+
+        RectTransform rect = overlayObject.GetComponent<RectTransform>();
+        rect.SetParent(canvas.rootCanvas.transform, false);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.SetAsLastSibling();
+
+        Image overlay = overlayObject.GetComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0f);
+        overlay.raycastTarget = true;
+        return overlay;
+    }
+
+    private static void SetImageAlpha(Image image, float alpha)
+    {
+        Color color = image.color;
+        color.a = alpha;
+        image.color = color;
+    }
+
+    private void FinishCharacterCreation()
+    {
         ApplyTo(targetAppearance);
         onConfirmed?.Invoke();
+        UnlockPlayerMovement();
+        Destroy(gameObject);
     }
 
     /// <summary>把资料中的五个稳定资源 ID 解析为动画资源并应用到指定角色。</summary>
@@ -275,16 +369,32 @@ public sealed class CharacterCreationController : MonoBehaviour
         BindButton("MaleBg", SetMale);
         BindButton("FemaleBg", SetFemale);
         BindButton("RandomNameBtn", RandomizeName);
+        startGameButton = BindButton("StartGameBtn", Confirm);
     }
 
     /// <summary>为现有图片对象补充或取得 Button，并绑定指定事件。</summary>
-    private void BindButton(string objectName, UnityAction action)
+    private Button BindButton(string objectName, UnityAction action)
     {
         Transform target = FindDescendant(transform, objectName);
-        if (target == null) return;
+        if (target == null) return null;
         Button button = target.GetComponent<Button>();
         if (button == null) button = target.gameObject.AddComponent<Button>();
         button.onClick.AddListener(action);
+        return button;
+    }
+
+    private void LockPlayerMovement()
+    {
+        if (targetAppearance == null) return;
+        playerMovement = targetAppearance.GetComponent<PlayerMovement>();
+        if (playerMovement == null) return;
+        playerMovementWasEnabled = playerMovement.enabled;
+        playerMovement.enabled = false;
+    }
+
+    private void UnlockPlayerMovement()
+    {
+        if (playerMovement != null) playerMovement.enabled = playerMovementWasEnabled;
     }
 
     /// <summary>根据稳定 ID 查找候选项下标；旧资源不存在时返回 -1。</summary>

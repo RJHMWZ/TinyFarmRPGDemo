@@ -9,7 +9,14 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "CharacterAppearanceDatabase", menuName = "Game/Player/Appearance Database")]
 public sealed class CharacterAppearanceDatabase : ScriptableObject
 {
-    /// <summary>一项可选外观及其分类、性别限制和具体逐帧资源。</summary>
+    /// <summary> 
+    /// 角色外观总表的单个条目。
+    /// id: 唯一标识符
+    /// displayName: 显示名称
+    /// category: 分类
+    /// gender: 性别限制
+    /// animationSet: 动画帧集
+    /// </summary>
     [Serializable]
     public sealed class Entry
     {
