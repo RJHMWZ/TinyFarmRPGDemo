@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b40b8c5ac35949bb99ab173a432eb0da, type: 3}
+  m_Name: CharacterNameDatabase
+  m_EditorClassIdentifier:
+  defaultLocaleCode: zh-CN
+  pools:
+  - localeCode: zh-CN
+    names:
+    - 小满
+    - 麦芽
+    - 青禾
+    - 星野
+    - 晴川
+    - 露葵
+    - 木棉
+    - 云杉
+  - localeCode: en
+    names:
+    - Robin
+    - Milo
+    - Hazel
+    - Willow
+    - Rowan
+    - Poppy

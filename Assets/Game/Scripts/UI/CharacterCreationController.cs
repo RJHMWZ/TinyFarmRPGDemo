@@ -26,8 +26,8 @@ public sealed class CharacterCreationController : MonoBehaviour
     }
 
     [Header("数据与应用目标")]
-    [Tooltip("运行时外观数据库；未设置时从 Resources 自动加载。")]
-    [SerializeField] private CharacterAppearanceDatabase database;
+    [Tooltip("游戏静态数据的统一入口。")]
+    [SerializeField] private GameDataCatalog dataCatalog;
     [Tooltip("确认或切换选项时接收外观的场景角色。")]
     [SerializeField] private PlayerAppearance targetAppearance;
 
@@ -57,15 +57,12 @@ public sealed class CharacterCreationController : MonoBehaviour
     private Button startGameButton;
     private PlayerMovement playerMovement;
     private bool playerMovementWasEnabled;
+    private CharacterNameLanguage nameLanguage;
+    private CharacterAppearanceDatabase database;
+    private CharacterNameDatabase nameDatabase;
 
     /// <summary>供后续创建存档、进入游戏等系统读取尚未或已经确认的角色资料。</summary>
     public CharacterCreationProfile CurrentProfile => profile;
-
-    private static readonly string[] RandomNames =
-    {
-        "小满", "麦芽", "青禾", "星野", "晴川", "露葵", "木棉", "云杉",
-        "Robin", "Milo", "Hazel", "Willow", "Rowan", "Poppy"
-    };
 
     private void Awake()
     {
@@ -89,16 +86,20 @@ public sealed class CharacterCreationController : MonoBehaviour
     public void Initialize()
     {
         if (initialized) return;
-        database = database != null ? database : Resources.Load<CharacterAppearanceDatabase>("CharacterAppearanceDatabase");
+        database = dataCatalog != null ? dataCatalog.CharacterAppearances : null;
+        nameDatabase = dataCatalog != null ? dataCatalog.CharacterNames : null;
         if (database == null)
         {
-            Debug.LogError("CharacterAppearanceDatabase is missing. Run Tools/Character Creation/Rebuild Database.", this);
+            Debug.LogError("GameDataCatalog or its CharacterAppearanceDatabase is missing.", this);
             return;
         }
+        if (nameDatabase == null)
+            Debug.LogWarning("CharacterNameDatabase is missing. Assign the asset from Assets/Game/Data.", this);
 
         AutoWire();
+        nameLanguage = LocaleToLanguage(nameDatabase != null ? nameDatabase.DefaultLocaleCode : "zh-CN");
         profile = CharacterCreationSave.Load();
-        if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = RandomNames[UnityEngine.Random.Range(0, RandomNames.Length)];
+        if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = GenerateRandomName();
         if (nameInput != null)
         {
             nameInput.text = profile.playerName;
@@ -119,9 +120,39 @@ public sealed class CharacterCreationController : MonoBehaviour
     /// <summary>从候选名字中随机一个名字，并同步输入框。</summary>
     public void RandomizeName()
     {
-        string value = RandomNames[UnityEngine.Random.Range(0, RandomNames.Length)];
+        string value = GenerateRandomName();
+        if (string.IsNullOrEmpty(value)) return;
         profile.playerName = value;
         if (nameInput != null) nameInput.text = value;
+    }
+
+    public void UseChineseNames() => nameLanguage = CharacterNameLanguage.Chinese;
+    public void UseEnglishNames() => nameLanguage = CharacterNameLanguage.English;
+    public void UseMixedNames() => nameLanguage = CharacterNameLanguage.Mixed;
+
+    public void SetNameLanguage(CharacterNameLanguage language)
+    {
+        nameLanguage = language;
+    }
+
+    private string GenerateRandomName()
+    {
+        string generatedName = nameLanguage == CharacterNameLanguage.Mixed
+            ? CharacterNameGenerator.GetRandomNameFromAllPools(nameDatabase)
+            : CharacterNameGenerator.GetRandomName(nameDatabase, LanguageToLocale(nameLanguage));
+        return string.IsNullOrEmpty(generatedName) ? "Player" : generatedName;
+    }
+
+    private static string LanguageToLocale(CharacterNameLanguage language)
+    {
+        return language == CharacterNameLanguage.English ? "en" : "zh-CN";
+    }
+
+    private static CharacterNameLanguage LocaleToLanguage(string localeCode)
+    {
+        return !string.IsNullOrEmpty(localeCode) && localeCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+            ? CharacterNameLanguage.English
+            : CharacterNameLanguage.Chinese;
     }
 
     /// <summary>在每个已有选择行中随机选择一项外观。</summary>

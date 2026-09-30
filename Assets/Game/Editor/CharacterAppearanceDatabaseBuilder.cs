@@ -7,13 +7,14 @@ using UnityEngine;
 
 /// <summary>
 /// 编辑器外观数据库生成器。
-/// 将 Data 目录中的 PlayerPartAnimationSet 转换为运行时可加载的 Resources 数据库。
+/// 将 Data 目录中的 PlayerPartAnimationSet 转换为外观数据库，数据与运行时代码分离。
 /// </summary>
 [InitializeOnLoad]
 public static class CharacterAppearanceDatabaseBuilder
 {
     private const string DataRoot = "Assets/Game/Data";
-    private const string DatabasePath = "Assets/Game/Resources/CharacterAppearanceDatabase.asset";
+    private const string DatabasePath = "Assets/Game/Data/CharacterAppearanceDatabase.asset";
+    private const string CatalogPath = "Assets/Game/Data/GameDataCatalog.asset";
 
     static CharacterAppearanceDatabaseBuilder()
     {
@@ -25,7 +26,7 @@ public static class CharacterAppearanceDatabaseBuilder
     [MenuItem("Tools/Character Creation/Rebuild Database")]
     public static void Rebuild()
     {
-        EnsureFolder("Assets/Game/Resources");
+        EnsureFolder(DataRoot);
         CharacterAppearanceDatabase database = AssetDatabase.LoadAssetAtPath<CharacterAppearanceDatabase>(DatabasePath);
         if (database == null)
         {
@@ -57,6 +58,43 @@ public static class CharacterAppearanceDatabaseBuilder
         EditorUtility.SetDirty(database);
         AssetDatabase.SaveAssets();
         Debug.Log("Character appearance database rebuilt: " + entries.Count + " items.", database);
+    }
+
+    [MenuItem("Tools/Character Creation/Validate Game Data")]
+    public static void ValidateOrThrow()
+    {
+        GameDataCatalog catalog = AssetDatabase.LoadAssetAtPath<GameDataCatalog>(CatalogPath);
+        if (catalog == null) throw new BuildFailedException("GameDataCatalog is missing at " + CatalogPath);
+        if (catalog.CharacterAppearances == null) throw new BuildFailedException("GameDataCatalog has no appearance database.");
+        if (catalog.CharacterNames == null) throw new BuildFailedException("GameDataCatalog has no name database.");
+
+        var appearanceIds = new HashSet<string>();
+        foreach (CharacterAppearanceDatabase.Entry entry in catalog.CharacterAppearances.Entries)
+        {
+            if (entry == null || entry.AnimationSet == null || string.IsNullOrWhiteSpace(entry.Id))
+                throw new BuildFailedException("Appearance database contains an incomplete entry.");
+            if (!appearanceIds.Add(entry.Id))
+                throw new BuildFailedException("Duplicate appearance ID: " + entry.Id);
+        }
+
+        var locales = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (CharacterNameDatabase.NamePool pool in catalog.CharacterNames.Pools)
+        {
+            if (pool == null || string.IsNullOrWhiteSpace(pool.LocaleCode))
+                throw new BuildFailedException("Name database contains a pool without a locale code.");
+            if (!locales.Add(pool.LocaleCode))
+                throw new BuildFailedException("Duplicate name locale: " + pool.LocaleCode);
+
+            bool hasName = false;
+            for (int i = 0; i < pool.Names.Count; i++)
+                hasName |= !string.IsNullOrWhiteSpace(pool.Names[i]);
+            if (!hasName) throw new BuildFailedException("Name pool is empty: " + pool.LocaleCode);
+        }
+
+        if (!locales.Contains(catalog.CharacterNames.DefaultLocaleCode))
+            throw new BuildFailedException("Default name locale has no matching pool: " + catalog.CharacterNames.DefaultLocaleCode);
+
+        Debug.Log("Game data validation passed.", catalog);
     }
 
     /// <summary>仅在数据库缺失时补建，避免每次 Domain Reload 都产生无效导入。</summary>
@@ -108,7 +146,11 @@ public static class CharacterAppearanceDatabaseBuilder
 public sealed class CharacterAppearanceBuildProcessor : IPreprocessBuildWithReport
 {
     public int callbackOrder => -1000;
-    public void OnPreprocessBuild(BuildReport report) => CharacterAppearanceDatabaseBuilder.Rebuild();
+    public void OnPreprocessBuild(BuildReport report)
+    {
+        CharacterAppearanceDatabaseBuilder.Rebuild();
+        CharacterAppearanceDatabaseBuilder.ValidateOrThrow();
+    }
 }
 
 /// <summary>监听 Data 目录的导入、删除和移动，并延迟重建数据库。</summary>
