@@ -17,12 +17,23 @@ public static class CharacterCreationSave
 
     private const int CurrentSaveVersion = 1;
     private const string SaveFolderName = "Saves";
-    private const string SaveFileName = "character-profile.json";
+    public const int SlotCount = 4;
+    private const string LegacySaveFileName = "character-profile.json";
+    private const string SaveFilePattern = "character-profile-slot-{0}.json";
+    private static int activeSlot;
 
     private static string SaveDirectory => Path.Combine(Application.persistentDataPath, SaveFolderName);
-    private static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
-    private static string BackupPath => SavePath + ".bak";
-    private static string TemporaryPath => SavePath + ".tmp";
+    private static string LegacySavePath => Path.Combine(SaveDirectory, LegacySaveFileName);
+    private static string SavePath => GetSavePath(activeSlot);
+    private static string BackupPath => GetBackupPath(activeSlot);
+    private static string TemporaryPath => GetTemporaryPath(activeSlot);
+
+    public static int ActiveSlot => activeSlot;
+
+    public static void SetActiveSlot(int slotIndex)
+    {
+        activeSlot = Mathf.Clamp(slotIndex, 0, SlotCount - 1);
+    }
 
     /// <summary>将完整角色资料序列化并立即写入磁盘。</summary>
     public static void Save(CharacterCreationProfile profile)
@@ -52,11 +63,55 @@ public static class CharacterCreationSave
     /// <summary>读取角色资料；没有存档或内容损坏时返回安全的空资料。</summary>
     public static CharacterCreationProfile Load()
     {
-        CharacterCreationProfile profile = TryLoad(SavePath);
-        if (profile != null) return profile;
+        return TryLoadProfile(activeSlot, out CharacterCreationProfile profile)
+            ? profile
+            : new CharacterCreationProfile();
+    }
 
-        profile = TryLoad(BackupPath);
-        return profile ?? new CharacterCreationProfile();
+    public static bool TryLoadProfile(out CharacterCreationProfile profile)
+    {
+        return TryLoadProfile(activeSlot, out profile);
+    }
+
+    public static bool TryLoadProfile(int slotIndex, out CharacterCreationProfile profile)
+    {
+        if (!IsValidSlot(slotIndex))
+        {
+            profile = null;
+            return false;
+        }
+
+        profile = TryLoad(GetSavePath(slotIndex)) ?? TryLoad(GetBackupPath(slotIndex));
+        if (profile == null && slotIndex == 0)
+            profile = TryLoad(LegacySavePath) ?? TryLoad(LegacySavePath + ".bak");
+        return profile != null;
+    }
+
+    public static bool HasSave(int slotIndex)
+    {
+        return TryLoadProfile(slotIndex, out _);
+    }
+
+    public static bool DeleteSlot(int slotIndex)
+    {
+        if (!IsValidSlot(slotIndex)) return false;
+        try
+        {
+            DeleteIfExists(GetSavePath(slotIndex));
+            DeleteIfExists(GetBackupPath(slotIndex));
+            DeleteIfExists(GetTemporaryPath(slotIndex));
+            if (slotIndex == 0)
+            {
+                DeleteIfExists(LegacySavePath);
+                DeleteIfExists(LegacySavePath + ".bak");
+            }
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError("Failed to delete save slot " + (slotIndex + 1) + ": " + exception.Message);
+            return false;
+        }
     }
 
     private static CharacterCreationProfile TryLoad(string path)
@@ -93,5 +148,20 @@ public static class CharacterCreationSave
         {
             // The original save remains intact; cleanup can be retried next time.
         }
+    }
+
+    private static bool IsValidSlot(int slotIndex) => slotIndex >= 0 && slotIndex < SlotCount;
+
+    private static string GetSavePath(int slotIndex)
+    {
+        return Path.Combine(SaveDirectory, string.Format(SaveFilePattern, slotIndex + 1));
+    }
+
+    private static string GetBackupPath(int slotIndex) => GetSavePath(slotIndex) + ".bak";
+    private static string GetTemporaryPath(int slotIndex) => GetSavePath(slotIndex) + ".tmp";
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path)) File.Delete(path);
     }
 }

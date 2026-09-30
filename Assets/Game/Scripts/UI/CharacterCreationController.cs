@@ -55,14 +55,50 @@ public sealed class CharacterCreationController : MonoBehaviour
     private bool initialized;
     private bool isConfirming;
     private Button startGameButton;
+    private Button returnButton;
     private PlayerMovement playerMovement;
     private bool playerMovementWasEnabled;
     private CharacterNameLanguage nameLanguage;
     private CharacterAppearanceDatabase database;
     private CharacterNameDatabase nameDatabase;
+    private bool startWithNewProfile;
 
     /// <summary>供后续创建存档、进入游戏等系统读取尚未或已经确认的角色资料。</summary>
     public CharacterCreationProfile CurrentProfile => profile;
+    public GameDataCatalog DataCatalog => dataCatalog;
+
+    /// <summary>Opens character creation with clean data without deleting the existing save first.</summary>
+    public void BeginNewGame()
+    {
+        bool wasInitialized = initialized;
+        startWithNewProfile = true;
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        if (wasInitialized)
+        {
+            ResetForNewGame();
+            LockPlayerMovement();
+        }
+    }
+
+    /// <summary>Abandons the unfinished character and returns to the title menu without touching the save.</summary>
+    public void ReturnToMainMenu()
+    {
+        if (isConfirming) return;
+
+        if (CharacterCreationSave.TryLoadProfile(out CharacterCreationProfile savedProfile))
+            CharacterAppearanceService.Apply(savedProfile, dataCatalog, targetAppearance);
+
+        Transform menuTransform = transform.parent != null ? transform.parent.Find("MenuPanel") : null;
+        MainMenuController menu = menuTransform != null ? menuTransform.GetComponent<MainMenuController>() : null;
+        if (menu == null)
+        {
+            Debug.LogError("MenuPanel/MainMenuController was not found.", this);
+            return;
+        }
+
+        menu.ShowMainMenu();
+        gameObject.SetActive(false);
+    }
 
     private void Awake()
     {
@@ -98,7 +134,7 @@ public sealed class CharacterCreationController : MonoBehaviour
 
         AutoWire();
         nameLanguage = LocaleToLanguage(nameDatabase != null ? nameDatabase.DefaultLocaleCode : "zh-CN");
-        profile = CharacterCreationSave.Load();
+        profile = startWithNewProfile ? new CharacterCreationProfile() : CharacterCreationSave.Load();
         if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = GenerateRandomName();
         if (nameInput != null)
         {
@@ -124,6 +160,24 @@ public sealed class CharacterCreationController : MonoBehaviour
         if (string.IsNullOrEmpty(value)) return;
         profile.playerName = value;
         if (nameInput != null) nameInput.text = value;
+    }
+
+    private void ResetForNewGame()
+    {
+        profile = new CharacterCreationProfile();
+        profile.playerName = GenerateRandomName();
+        if (nameInput != null) nameInput.text = profile.playerName;
+        SetGender(profile.gender);
+        isConfirming = false;
+        if (startGameButton != null) startGameButton.interactable = true;
+
+        CanvasGroup panelGroup = GetComponent<CanvasGroup>();
+        if (panelGroup != null)
+        {
+            panelGroup.alpha = 1f;
+            panelGroup.interactable = true;
+            panelGroup.blocksRaycasts = true;
+        }
     }
 
     public void UseChineseNames() => nameLanguage = CharacterNameLanguage.Chinese;
@@ -401,6 +455,7 @@ public sealed class CharacterCreationController : MonoBehaviour
         BindButton("FemaleBg", SetFemale);
         BindButton("RandomNameBtn", RandomizeName);
         startGameButton = BindButton("StartGameBtn", Confirm);
+        returnButton = BindButton("ReturnBtn", ReturnToMainMenu);
     }
 
     /// <summary>为现有图片对象补充或取得 Button，并绑定指定事件。</summary>
