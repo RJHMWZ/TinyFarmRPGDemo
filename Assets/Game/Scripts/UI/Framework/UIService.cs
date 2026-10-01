@@ -27,9 +27,9 @@ public sealed class UIService : MonoBehaviour
     public UIPanel Open(string id, object args = null)
     {
         ResolveRoot();
-        if (root == null || catalog == null)
+        if (root == null || !root.IsConfigured || catalog == null)
         {
-            Debug.LogError("UIRoot or UIPanelCatalog is not available.", this);
+            Debug.LogError("UIRoot is missing or incomplete, or UIPanelCatalog is not available.", this);
             return null;
         }
 
@@ -122,14 +122,17 @@ public sealed class UIService : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        UIRoot nextRoot = UIRoot.Active;
+        if (nextRoot == root) return;
+
         instances.Clear();
         stack.Clear();
         SetUiPause(false);
-        ResolveRoot();
+        root = nextRoot;
     }
 
     private void ResolveRoot()
     {
-        root = FindObjectOfType<UIRoot>();
+        root = UIRoot.Active;
     }
 }

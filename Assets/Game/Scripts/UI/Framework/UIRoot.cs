@@ -3,12 +3,31 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class UIRoot : MonoBehaviour
 {
+    public static UIRoot Active { get; private set; }
+
     [SerializeField] private RectTransform hudLayer;
     [SerializeField] private RectTransform screenLayer;
     [SerializeField] private RectTransform windowLayer;
     [SerializeField] private RectTransform popupLayer;
     [SerializeField] private RectTransform toastLayer;
     [SerializeField] private RectTransform transitionLayer;
+
+    public bool IsConfigured => hudLayer != null && screenLayer != null && windowLayer != null &&
+                                popupLayer != null && toastLayer != null && transitionLayer != null;
+
+    private void OnEnable()
+    {
+        if (Active != null && Active != this)
+        {
+            Debug.LogError("More than one active UIRoot exists.", this);
+        }
+        Active = this;
+    }
+
+    private void OnDisable()
+    {
+        if (Active == this) Active = null;
+    }
 
     public RectTransform GetLayer(UILayer layer)
     {

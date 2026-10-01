@@ -156,6 +156,7 @@ public sealed class CharacterAppearanceBuildProcessor : IPreprocessBuildWithRepo
 /// <summary>监听 Data 目录的导入、删除和移动，并延迟重建数据库。</summary>
 public sealed class CharacterAppearanceDataPostprocessor : AssetPostprocessor
 {
+    private const string AppearanceDataRoot = "Assets/Game/Data/CharacterAppearance/";
     private static bool rebuilding;
 
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
@@ -173,7 +174,7 @@ public sealed class CharacterAppearanceDataPostprocessor : AssetPostprocessor
     private static bool TouchesData(string[] paths)
     {
         for (int i = 0; i < paths.Length; i++)
-            if (paths[i].Replace('\\', '/').StartsWith("Assets/Game/Data/")) return true;
+            if (paths[i].Replace('\\', '/').StartsWith(AppearanceDataRoot, System.StringComparison.Ordinal)) return true;
         return false;
     }
 }

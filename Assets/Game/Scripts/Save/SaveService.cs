@@ -26,8 +26,17 @@ public sealed class SaveService
     private const string LegacyFilePattern = "character-profile-slot-{0}.json";
     private const string LegacySingleFile = "character-profile.json";
     public const int SlotCount = 4;
+    private readonly string saveDirectory;
 
-    private static string SaveDirectory => Path.Combine(Application.persistentDataPath, SaveFolderName);
+    public SaveService() : this(Path.Combine(Application.persistentDataPath, SaveFolderName)) { }
+
+    /// <summary>Allows tests and platform adapters to provide an isolated storage directory.</summary>
+    public SaveService(string saveDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(saveDirectory))
+            throw new ArgumentException("Save directory cannot be empty.", nameof(saveDirectory));
+        this.saveDirectory = Path.GetFullPath(saveDirectory);
+    }
 
     public bool Save(int slotIndex, GameSaveData data)
     {
@@ -42,7 +51,7 @@ public sealed class SaveService
         string backupPath = path + ".bak";
         try
         {
-            Directory.CreateDirectory(SaveDirectory);
+            Directory.CreateDirectory(saveDirectory);
             File.WriteAllText(temporaryPath, JsonUtility.ToJson(new SaveEnvelope { data = data }, true));
             if (File.Exists(path))
             {
@@ -91,7 +100,7 @@ public sealed class SaveService
         {
             DeleteSaveFamily(GetSavePath(slotIndex));
             DeleteSaveFamily(GetLegacyPath(slotIndex));
-            if (slotIndex == 0) DeleteSaveFamily(Path.Combine(SaveDirectory, LegacySingleFile));
+            if (slotIndex == 0) DeleteSaveFamily(Path.Combine(saveDirectory, LegacySingleFile));
             return true;
         }
         catch (Exception exception)
@@ -117,13 +126,13 @@ public sealed class SaveService
         }
     }
 
-    private static GameSaveData TryLoadLegacy(int slotIndex)
+    private GameSaveData TryLoadLegacy(int slotIndex)
     {
         string legacyPath = GetLegacyPath(slotIndex);
         CharacterCreationProfile profile = ReadLegacyProfile(legacyPath) ?? ReadLegacyProfile(legacyPath + ".bak");
         if (profile == null && slotIndex == 0)
         {
-            string singlePath = Path.Combine(SaveDirectory, LegacySingleFile);
+            string singlePath = Path.Combine(saveDirectory, LegacySingleFile);
             profile = ReadLegacyProfile(singlePath) ?? ReadLegacyProfile(singlePath + ".bak");
         }
         return profile == null ? null : GameSaveData.CreateNew(profile);
@@ -148,8 +157,8 @@ public sealed class SaveService
     }
 
     private static bool IsValidSlot(int slotIndex) => slotIndex >= 0 && slotIndex < SlotCount;
-    private static string GetSavePath(int slotIndex) => Path.Combine(SaveDirectory, string.Format(SaveFilePattern, slotIndex + 1));
-    private static string GetLegacyPath(int slotIndex) => Path.Combine(SaveDirectory, string.Format(LegacyFilePattern, slotIndex + 1));
+    private string GetSavePath(int slotIndex) => Path.Combine(saveDirectory, string.Format(SaveFilePattern, slotIndex + 1));
+    private string GetLegacyPath(int slotIndex) => Path.Combine(saveDirectory, string.Format(LegacyFilePattern, slotIndex + 1));
 
     private static void DeleteSaveFamily(string path)
     {

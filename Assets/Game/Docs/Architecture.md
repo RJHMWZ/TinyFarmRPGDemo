@@ -85,6 +85,14 @@ Add new serializable feature data under `GameSaveData`. Increment the envelope v
 
 Run `Tools > Tiny Farm > Validate Project` before committing structural changes. Player builds run the same validation automatically after the appearance database is rebuilt.
 
+For a command-line or CI run, close the local editor for this project and execute:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Tools\CI\Run-UnityValidation.ps1 -UnityPath "C:\Path\To\Unity.exe"
+```
+
+Reports are written to `Artifacts/CI`, which is intentionally excluded from version control. The script fails if Unity returns an error, a test suite fails, or a suite discovers no tests.
+
 The validator checks:
 
 - required scene paths and Build Settings order;
@@ -92,3 +100,5 @@ The validator checks:
 - character appearance and name catalogs;
 - duplicate or incomplete UI panel registrations;
 - missing MonoBehaviour scripts on game-owned prefabs.
+
+See `CommercialRoadmap.md` for the current English-only boundary and the ordered production priorities.
