@@ -1,22 +1,26 @@
-# 角色外观资源约定
+# 游戏数据目录约定
 
-`GameDataCatalog.asset` 是运行时静态配置的唯一入口。场景和 Prefab 应引用 Catalog，
-业务代码不要依赖资源文件夹路径。配置数据使用 ScriptableObject；玩家进度使用
-`Application.persistentDataPath/Saves` 下的版本化 JSON，二者不可混用。
+`Catalogs/GameDataCatalog.asset` 是运行时静态配置的统一入口。Scene 和 Prefab 引用 Catalog，业务代码不依赖资源文件夹路径。
 
-角色创建系统会扫描 `Assets/Game/Data` 下所有 `PlayerPartAnimationSet`，无需在代码中维护数量。
+目录职责：
 
-- 一级目录决定类型：`Skin`、`Clothes`、`Eyes`、`Hair`、`Accessory`。
-- 路径中包含 `/Male/` 或 `/Female/` 时，该资源只对对应性别显示；未包含时为通用资源。
-- 文件名和子目录可以自由扩展，排序采用自然排序（例如 `Hair_2` 位于 `Hair_10` 前）。
-- 资源的 Unity GUID 是存档 ID；资源可移动或改名，但不要删除 `.meta`，否则旧存档会失去对应项。
-- 新增、删除或移动资源后，编辑器会自动重建
-  `Assets/Game/Data/CharacterAppearanceDatabase.asset`。
-- 也可通过 `Tools > Character Creation > Rebuild Database` 手动重建；正式打包前还会强制重建一次。
+- `Catalogs`：数据库和总目录等 ScriptableObject 入口。
+- `CharacterAppearance`：捏人系统的皮肤、服装、眼睛、头发和饰品定义。
+- `UI`：UI 面板目录等配置资产。
+- 玩家进度不放在 Assets 中，而是写入 `Application.persistentDataPath/Saves` 下的版本化 JSON。
 
-每套资源需要保持现有逐帧规范：Idle 为 4 个方向 × 4 帧，Walk 为 4 个方向 × 6 帧。
+## 角色外观
+
+编辑器扫描 `Data/CharacterAppearance` 下的所有 `PlayerPartAnimationSet`，自动生成
+`Catalogs/CharacterAppearanceDatabase.asset`。
+
+- 一级目录决定分类：`Skin`、`Clothes`、`Eyes`、`Hair`、`Accessory`。
+- 路径包含 `/Male/` 或 `/Female/` 时，只对相应性别显示；否则视为通用资源。
+- Unity GUID 是存档中的稳定资源 ID。资源可以移动或改名，但不要删除其 `.meta` 文件。
+- 可通过 `Tools > Character Creation > Rebuild Database` 手动重建；Player 构建前也会自动重建并验证。
+
+每套动画继续遵守现有逐帧规范：Idle 为四方向乘四帧，Walk 为四方向乘六帧。
 
 ## 随机名字
 
-`CharacterNameDatabase.asset` 按语言代码维护名字池。内置 `zh-CN` 与 `en`，以后可以继续
-增加 `ja`、`ko` 等名字池，不需要修改随机生成逻辑。空白名字会在运行时自动忽略。
+`Catalogs/CharacterNameDatabase.asset` 按语言代码维护名字池。目前包含 `zh-CN` 和 `en`，以后可以继续添加 `ja`、`ko` 等语言，而不需要修改随机生成逻辑。

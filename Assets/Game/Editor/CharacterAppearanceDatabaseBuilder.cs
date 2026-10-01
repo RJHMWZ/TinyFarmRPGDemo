@@ -12,9 +12,9 @@ using UnityEngine;
 [InitializeOnLoad]
 public static class CharacterAppearanceDatabaseBuilder
 {
-    private const string DataRoot = "Assets/Game/Data";
-    private const string DatabasePath = "Assets/Game/Data/CharacterAppearanceDatabase.asset";
-    private const string CatalogPath = "Assets/Game/Data/GameDataCatalog.asset";
+    private const string DataRoot = "Assets/Game/Data/CharacterAppearance";
+    private const string DatabasePath = "Assets/Game/Data/Catalogs/CharacterAppearanceDatabase.asset";
+    private const string CatalogPath = "Assets/Game/Data/Catalogs/GameDataCatalog.asset";
 
     static CharacterAppearanceDatabaseBuilder()
     {
