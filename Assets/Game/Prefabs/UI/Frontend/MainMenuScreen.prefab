@@ -506,6 +506,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3802125348235190311}
+  - component: {fileID: 7642183831475921035}
   m_Layer: 5
   m_Name: MainMenuScreen
   m_TagString: Untagged
@@ -531,6 +532,22 @@ RectTransform:
   - {fileID: 6518635409077423219}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7642183831475921035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6349930100161564230}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1264b03d8ebc49d79e0b6ff006bb027e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  createGameButton: {fileID: 8277262082895290686}
+  loadGameButton: {fileID: 8763894525003158925}
+  settingsButton: {fileID: 830709503620158848}
+  exitButton: {fileID: 6181696816272076744}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}

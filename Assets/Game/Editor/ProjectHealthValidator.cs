@@ -10,6 +10,8 @@ public static class ProjectHealthValidator
     private const string GameRootPath = "Assets/Game/Prefabs/Core/GameRoot.prefab";
     private const string GameDataPath = "Assets/Game/Data/Catalogs/GameDataCatalog.asset";
     private const string UiCatalogPath = "Assets/Game/Data/UI/UIPanelCatalog.asset";
+    private const string MainMenuViewPath = "Assets/Game/Prefabs/UI/Frontend/MainMenuScreen.prefab";
+    private const string SaveSelectViewPath = "Assets/Game/Prefabs/UI/Frontend/SaveSelectScreen.prefab";
 
     private static readonly string[] RequiredScenes =
     {
@@ -39,6 +41,7 @@ public static class ProjectHealthValidator
         ValidateGameRoot(errors);
         ValidateData(errors);
         ValidateUiCatalog(errors);
+        ValidateFrontendViews(errors);
         ValidatePrefabs(errors);
 
         if (errors.Count > 0)
@@ -122,6 +125,19 @@ public static class ProjectHealthValidator
             if (!ids.Add(entry.id)) errors.Add("Duplicate UI panel id: " + entry.id);
             if (entry.prefab == null) errors.Add("UI panel " + entry.id + " has no prefab.");
         }
+    }
+
+    private static void ValidateFrontendViews(List<string> errors)
+    {
+        GameObject menuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MainMenuViewPath);
+        MainMenuView menuView = menuPrefab != null ? menuPrefab.GetComponent<MainMenuView>() : null;
+        if (menuView == null || !menuView.IsConfigured)
+            errors.Add("MainMenuView is missing or incomplete: " + MainMenuViewPath);
+
+        GameObject savePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SaveSelectViewPath);
+        SaveSelectView saveView = savePrefab != null ? savePrefab.GetComponent<SaveSelectView>() : null;
+        if (saveView == null || !saveView.IsConfigured)
+            errors.Add("SaveSelectView is missing or incomplete: " + SaveSelectViewPath);
     }
 
     private static void ValidatePrefabs(List<string> errors)

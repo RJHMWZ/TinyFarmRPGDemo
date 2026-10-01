@@ -1249,6 +1249,7 @@ GameObject:
   - component: {fileID: 2384820765303643000}
   - component: {fileID: 7021475739891110422}
   - component: {fileID: 1038190721677231003}
+  - component: {fileID: 6842537901140287361}
   m_Layer: 5
   m_Name: SaveSelectScreen
   m_TagString: Untagged
@@ -1271,6 +1272,35 @@ RectTransform:
   - {fileID: 7457439649013027830}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6842537901140287361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4921799326497422407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c36ed7968f54028a93900bca5086a7e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  panelTitle: {fileID: 3633441379135460618}
+  description: {fileID: 8316452784438730070}
+  primaryActionButton: {fileID: 2275110051527215168}
+  primaryActionLabel: {fileID: 3586561374368236413}
+  deleteButton: {fileID: 632521907136942758}
+  deleteButtonLabel: {fileID: 4226612733928730361}
+  backButton: {fileID: 2303411659993877299}
+  slotButtons:
+  - {fileID: 2259457102274733901}
+  - {fileID: 3478880258239570766}
+  - {fileID: 5457282933147731963}
+  - {fileID: 3767763222975312091}
+  slotLabels:
+  - {fileID: 1377681995580717830}
+  - {fileID: 4690383564656896890}
+  - {fileID: 7529919884000657205}
+  - {fileID: 7596941562120002416}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}

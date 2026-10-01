@@ -1,28 +1,21 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-/// <summary>Coordinates front-end screens. Scene loading and save IO remain in services.</summary>
+/// <summary>Coordinates frontend screens. Scene loading and save IO remain in services.</summary>
 public sealed class MainMenuController : MonoBehaviour
 {
     private enum SavePanelMode { Create, Load }
 
-    [Header("Front-end screens")]
+    [Header("Frontend screens")]
     [SerializeField] private GameObject menuPanel;
     [SerializeField] private GameObject savePanel;
     [SerializeField] private CharacterCreationController characterCreation;
 
-    private Button createGameButton;
-    private Button readSaveButton;
-    private Button exitButton;
-    private TMP_Text panelTitle;
-    private TMP_Text saveDescription;
-    private TMP_Text actionButtonLabel;
-    private TMP_Text deleteButtonLabel;
-    private Button actionButton;
-    private Button deleteButton;
-    private readonly Button[] slotButtons = new Button[CharacterCreationSave.SlotCount];
+    private readonly UnityAction[] slotActions = new UnityAction[CharacterCreationSave.SlotCount];
+    private MainMenuView menuView;
+    private SaveSelectView saveView;
+    private bool bindingsRegistered;
     private SavePanelMode panelMode;
     private int selectedSlot = -1;
     private int pendingDeleteSlot = -1;
@@ -37,27 +30,18 @@ public sealed class MainMenuController : MonoBehaviour
 
     private void Awake()
     {
-        if (menuPanel == null) menuPanel = gameObject;
-        if (savePanel == null)
+        if (!ResolveViews())
         {
-            Canvas canvas = GetComponentInParent<Canvas>();
-            Transform found = canvas != null ? FindDescendant(canvas.transform, "SavePanel") : null;
-            if (found != null) savePanel = found.gameObject;
-        }
-        if (characterCreation == null)
-        {
-            Canvas canvas = GetComponentInParent<Canvas>();
-            Transform found = canvas != null ? FindDescendant(canvas.transform, "CharacterCreation") : null;
-            if (found != null) characterCreation = found.GetComponent<CharacterCreationController>();
+            enabled = false;
+            return;
         }
 
-        createGameButton = FindComponent<Button>(menuPanel.transform, "CreateGameBtn");
-        readSaveButton = FindComponent<Button>(menuPanel.transform, "ReadarchivesBtn");
-        exitButton = FindComponent<Button>(menuPanel.transform, "ExitBtn") ?? FindComponent<Button>(menuPanel.transform, "EixtBtn");
-        Bind(createGameButton, CreateNewGame);
-        Bind(readSaveButton, OpenSavePanel);
-        Bind(exitButton, ExitGame);
-        CacheSavePanel();
+        Bind(menuView.CreateGameButton, CreateNewGame);
+        Bind(menuView.LoadGameButton, OpenSavePanel);
+        Bind(menuView.ExitButton, ExitGame);
+        BindSavePanel();
+        bindingsRegistered = true;
+
         if (characterCreation != null)
         {
             characterCreation.Configure(this);
@@ -68,9 +52,21 @@ public sealed class MainMenuController : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (createGameButton != null) createGameButton.onClick.RemoveListener(CreateNewGame);
-        if (readSaveButton != null) readSaveButton.onClick.RemoveListener(OpenSavePanel);
-        if (exitButton != null) exitButton.onClick.RemoveListener(ExitGame);
+        if (!bindingsRegistered) return;
+
+        if (menuView != null)
+        {
+            Unbind(menuView.CreateGameButton, CreateNewGame);
+            Unbind(menuView.LoadGameButton, OpenSavePanel);
+            Unbind(menuView.ExitButton, ExitGame);
+        }
+
+        if (saveView == null) return;
+        Unbind(saveView.PrimaryActionButton, ConfirmSelectedSlot);
+        Unbind(saveView.DeleteButton, DeleteSelectedSlot);
+        Unbind(saveView.BackButton, CloseSavePanel);
+        for (int i = 0; i < slotActions.Length; i++)
+            Unbind(saveView.GetSlotButton(i), slotActions[i]);
     }
 
     public void CreateNewGame() => OpenSavePanel(SavePanelMode.Create);
@@ -96,15 +92,17 @@ public sealed class MainMenuController : MonoBehaviour
             if (CharacterCreationSave.HasSave(selectedSlot) && pendingDeleteSlot != -2)
             {
                 pendingDeleteSlot = -2;
-                if (saveDescription != null) saveDescription.text += "\nThis slot already has data. Click Create again to overwrite it.";
+                saveView.Description.text += "\nThis slot already has data. Click Create again to overwrite it.";
                 return;
             }
+
             GameRoot.Instance.Flow.SelectNewGameSlot(selectedSlot);
             CloseSavePanel();
-            if (menuPanel != null) menuPanel.SetActive(false);
+            menuPanel.SetActive(false);
             if (characterCreation != null) characterCreation.BeginNewGame();
             return;
         }
+
         GameRoot.Instance.Flow.LoadGame(selectedSlot);
     }
 
@@ -114,10 +112,11 @@ public sealed class MainMenuController : MonoBehaviour
         if (pendingDeleteSlot != selectedSlot)
         {
             pendingDeleteSlot = selectedSlot;
-            if (deleteButtonLabel != null) deleteButtonLabel.text = "Confirm Delete";
-            if (saveDescription != null) saveDescription.text += "\nClick Confirm Delete to permanently remove this save.";
+            saveView.DeleteButtonLabel.text = "Confirm Delete";
+            saveView.Description.text += "\nClick Confirm Delete to permanently remove this save.";
             return;
         }
+
         CharacterCreationSave.DeleteSlot(selectedSlot);
         pendingDeleteSlot = -1;
         RefreshSavePanel();
@@ -132,13 +131,45 @@ public sealed class MainMenuController : MonoBehaviour
 #endif
     }
 
+    private bool ResolveViews()
+    {
+        if (menuPanel == null || savePanel == null || characterCreation == null)
+        {
+            Debug.LogError("MainMenuController screen references are incomplete.", this);
+            return false;
+        }
+
+        menuView = menuPanel.GetComponent<MainMenuView>();
+        saveView = savePanel.GetComponent<SaveSelectView>();
+        if (menuView == null || !menuView.IsConfigured)
+        {
+            Debug.LogError("MainMenuView is missing or has incomplete references.", menuPanel);
+            return false;
+        }
+        if (saveView == null || !saveView.IsConfigured)
+        {
+            Debug.LogError("SaveSelectView is missing or has incomplete references.", savePanel);
+            return false;
+        }
+        return true;
+    }
+
+    private void BindSavePanel()
+    {
+        for (int i = 0; i < slotActions.Length; i++)
+        {
+            int capturedSlot = i;
+            slotActions[i] = () => SelectSlot(capturedSlot);
+            Bind(saveView.GetSlotButton(i), slotActions[i]);
+        }
+        Bind(saveView.PrimaryActionButton, ConfirmSelectedSlot);
+        Bind(saveView.DeleteButton, DeleteSelectedSlot);
+        Bind(saveView.BackButton, CloseSavePanel);
+        savePanel.SetActive(false);
+    }
+
     private void OpenSavePanel(SavePanelMode mode)
     {
-        if (savePanel == null)
-        {
-            Debug.LogError("SavePanel reference is missing.", this);
-            return;
-        }
         panelMode = mode;
         selectedSlot = -1;
         pendingDeleteSlot = -1;
@@ -147,51 +178,35 @@ public sealed class MainMenuController : MonoBehaviour
         savePanel.transform.SetAsLastSibling();
     }
 
-    private void CacheSavePanel()
-    {
-        if (savePanel == null) return;
-        panelTitle = FindComponent<TMP_Text>(savePanel.transform, "PanelTitle");
-        saveDescription = FindComponent<TMP_Text>(savePanel.transform, "SaveDescription");
-        for (int i = 0; i < slotButtons.Length; i++)
-        {
-            int capturedSlot = i;
-            slotButtons[i] = FindComponent<Button>(savePanel.transform, "SaveSlot" + (i + 1));
-            if (slotButtons[i] != null) slotButtons[i].onClick.AddListener(() => SelectSlot(capturedSlot));
-        }
-        actionButton = FindComponent<Button>(savePanel.transform, "PrimaryActionBtn");
-        deleteButton = FindComponent<Button>(savePanel.transform, "DeleteSaveBtn");
-        Button backButton = FindComponent<Button>(savePanel.transform, "BackBtn");
-        if (actionButton != null) actionButton.onClick.AddListener(ConfirmSelectedSlot);
-        if (deleteButton != null) deleteButton.onClick.AddListener(DeleteSelectedSlot);
-        if (backButton != null) backButton.onClick.AddListener(CloseSavePanel);
-        actionButtonLabel = actionButton != null ? actionButton.GetComponentInChildren<TMP_Text>(true) : null;
-        deleteButtonLabel = deleteButton != null ? deleteButton.GetComponentInChildren<TMP_Text>(true) : null;
-        savePanel.SetActive(false);
-    }
-
     private void RefreshSavePanel()
     {
-        if (panelTitle != null) panelTitle.text = panelMode == SavePanelMode.Load ? "Choose a Save to Load" : "Choose a Slot for New Game";
-        if (actionButtonLabel != null) actionButtonLabel.text = panelMode == SavePanelMode.Load ? "Load" : "Create";
-        if (deleteButtonLabel != null) deleteButtonLabel.text = "Delete";
-        for (int i = 0; i < slotButtons.Length; i++)
+        bool loading = panelMode == SavePanelMode.Load;
+        saveView.PanelTitle.text = loading ? "Choose a Save to Load" : "Choose a Slot for New Game";
+        saveView.PrimaryActionLabel.text = loading ? "Load" : "Create";
+        saveView.DeleteButtonLabel.text = "Delete";
+
+        for (int i = 0; i < saveView.SlotCount; i++)
         {
             bool hasSave = CharacterCreationSave.TryLoadProfile(i, out CharacterCreationProfile slotProfile);
-            TMP_Text label = slotButtons[i] != null ? slotButtons[i].GetComponentInChildren<TMP_Text>(true) : null;
-            if (label != null) label.text = hasSave ? "Slot " + (i + 1) + "  -  " + DisplayName(slotProfile) : "Slot " + (i + 1) + "  -  Empty";
-            if (slotButtons[i] != null) slotButtons[i].image.color = i == selectedSlot ? new Color(1f, 0.82f, 0.42f, 1f) : Color.white;
+            saveView.GetSlotLabel(i).text = hasSave
+                ? "Slot " + (i + 1) + "  -  " + DisplayName(slotProfile)
+                : "Slot " + (i + 1) + "  -  Empty";
+
+            Button button = saveView.GetSlotButton(i);
+            if (button.image != null)
+                button.image.color = i == selectedSlot ? new Color(1f, 0.82f, 0.42f, 1f) : Color.white;
         }
+
         bool selected = selectedSlot >= 0;
         CharacterCreationProfile profile = null;
         bool selectedHasSave = selected && CharacterCreationSave.TryLoadProfile(selectedSlot, out profile);
-        if (saveDescription != null)
-            saveDescription.text = !selected
-                ? "Select one of the four save slots.\nSelecting a slot will not start the game."
-                : selectedHasSave
-                    ? "Slot " + (selectedSlot + 1) + "\nCharacter: " + DisplayName(profile) + "\nSave data is available."
-                    : "Slot " + (selectedSlot + 1) + "\nEmpty slot";
-        if (actionButton != null) actionButton.interactable = selected && (panelMode == SavePanelMode.Create || selectedHasSave);
-        if (deleteButton != null) deleteButton.interactable = selectedHasSave;
+        saveView.Description.text = !selected
+            ? "Select one of the four save slots.\nSelecting a slot will not start the game."
+            : selectedHasSave
+                ? "Slot " + (selectedSlot + 1) + "\nCharacter: " + DisplayName(profile) + "\nSave data is available."
+                : "Slot " + (selectedSlot + 1) + "\nEmpty slot";
+        saveView.PrimaryActionButton.interactable = selected && (!loading || selectedHasSave);
+        saveView.DeleteButton.interactable = selectedHasSave;
     }
 
     private void SelectSlot(int slotIndex)
@@ -201,24 +216,18 @@ public sealed class MainMenuController : MonoBehaviour
         RefreshSavePanel();
     }
 
-    private static string DisplayName(CharacterCreationProfile profile) => profile == null || string.IsNullOrWhiteSpace(profile.playerName) ? "Unnamed" : profile.playerName;
+    private static string DisplayName(CharacterCreationProfile profile)
+    {
+        return profile == null || string.IsNullOrWhiteSpace(profile.playerName) ? "Unnamed" : profile.playerName;
+    }
 
     private static void Bind(Button button, UnityAction action)
     {
-        if (button != null) button.onClick.AddListener(action);
+        if (button != null && action != null) button.onClick.AddListener(action);
     }
 
-    private static T FindComponent<T>(Transform root, string objectName) where T : Component
+    private static void Unbind(Button button, UnityAction action)
     {
-        Transform target = FindDescendant(root, objectName);
-        return target != null ? target.GetComponent<T>() : null;
-    }
-
-    private static Transform FindDescendant(Transform root, string objectName)
-    {
-        if (root == null) return null;
-        Transform[] children = root.GetComponentsInChildren<Transform>(true);
-        for (int i = 0; i < children.Length; i++) if (children[i].name == objectName) return children[i];
-        return null;
+        if (button != null && action != null) button.onClick.RemoveListener(action);
     }
 }
