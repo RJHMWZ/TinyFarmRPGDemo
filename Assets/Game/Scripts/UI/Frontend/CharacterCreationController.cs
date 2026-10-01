@@ -20,6 +20,8 @@ public sealed class CharacterCreationController : MonoBehaviour
         public TMP_Text Number;
         public Button Previous;
         public Button Next;
+        public UnityAction PreviousAction;
+        public UnityAction NextAction;
         public readonly List<CharacterAppearanceDatabase.Entry> Options =
             new List<CharacterAppearanceDatabase.Entry>();
         public int Index;
@@ -104,8 +106,10 @@ public sealed class CharacterCreationController : MonoBehaviour
         // 这些监听由本组件在运行时添加，销毁时清理以避免重复绑定。
         foreach (Row row in rows.Values)
         {
-            if (row.Previous != null) row.Previous.onClick.RemoveAllListeners();
-            if (row.Next != null) row.Next.onClick.RemoveAllListeners();
+            if (row.Previous != null && row.PreviousAction != null)
+                row.Previous.onClick.RemoveListener(row.PreviousAction);
+            if (row.Next != null && row.NextAction != null)
+                row.Next.onClick.RemoveListener(row.NextAction);
         }
     }
 
@@ -297,8 +301,10 @@ public sealed class CharacterCreationController : MonoBehaviour
             Previous = buttons.Length > 0 ? buttons[0] : null,
             Next = buttons.Length > 1 ? buttons[buttons.Length - 1] : null
         };
-        if (row.Previous != null) row.Previous.onClick.AddListener(() => Select(row, -1));
-        if (row.Next != null) row.Next.onClick.AddListener(() => Select(row, 1));
+        row.PreviousAction = () => Select(row, -1);
+        row.NextAction = () => Select(row, 1);
+        if (row.Previous != null) row.Previous.onClick.AddListener(row.PreviousAction);
+        if (row.Next != null) row.Next.onClick.AddListener(row.NextAction);
         rows.Add(category, row);
     }
 

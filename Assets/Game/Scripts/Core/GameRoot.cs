@@ -10,6 +10,7 @@ public sealed class GameRoot : MonoBehaviour
     public SceneLoader Scenes { get; private set; }
     public TransitionService Transitions { get; private set; }
     public InputModeService InputModes { get; private set; }
+    public PauseService Pause { get; private set; }
     public UIService UI { get; private set; }
     public GameFlowController Flow { get; private set; }
 
@@ -28,6 +29,7 @@ public sealed class GameRoot : MonoBehaviour
         Scenes = GetOrAdd<SceneLoader>();
         Transitions = GetOrAdd<TransitionService>();
         InputModes = GetOrAdd<InputModeService>();
+        Pause = GetOrAdd<PauseService>();
         UI = GetOrAdd<UIService>();
         Flow = GetOrAdd<GameFlowController>();
     }
@@ -36,6 +38,11 @@ public sealed class GameRoot : MonoBehaviour
     {
         T component = GetComponent<T>();
         return component != null ? component : gameObject.AddComponent<T>();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 }
 

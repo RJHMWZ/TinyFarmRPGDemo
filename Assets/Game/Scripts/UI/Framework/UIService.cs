@@ -19,6 +19,7 @@ public sealed class UIService : MonoBehaviour
     private void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        SetUiPause(false);
     }
 
     public void Configure(UIPanelCatalog value) => catalog = value;
@@ -47,17 +48,16 @@ public sealed class UIService : MonoBehaviour
             instances[id] = panel;
         }
 
+        stack.Remove(id);
         if (stack.Count > 0 && instances.TryGetValue(stack[stack.Count - 1], out UIPanel previous) && previous != null)
             previous.OnBlur();
         panel.SetVisible(true);
         panel.transform.SetAsLastSibling();
         panel.OnOpen(args);
         panel.OnFocus();
-        stack.Remove(id);
         stack.Add(id);
 
-        if (definition.hideHud) SetHudVisible(false);
-        if (definition.pauseGameplay) Time.timeScale = 0f;
+        RefreshPresentationState();
         GameRoot.Instance?.InputModes.SetMode(GameInputMode.UserInterface);
         return panel;
     }
@@ -85,16 +85,7 @@ public sealed class UIService : MonoBehaviour
                 panel.SetVisible(false);
         }
 
-        bool anyPaused = false;
-        bool anyHidesHud = false;
-        for (int i = 0; i < stack.Count; i++)
-        {
-            UIPanelCatalog.Entry remaining = catalog.Find(stack[i]);
-            anyPaused |= remaining != null && remaining.pauseGameplay;
-            anyHidesHud |= remaining != null && remaining.hideHud;
-        }
-        Time.timeScale = anyPaused ? 0f : 1f;
-        SetHudVisible(!anyHidesHud);
+        RefreshPresentationState();
 
         if (stack.Count > 0 && instances.TryGetValue(stack[stack.Count - 1], out UIPanel next) && next != null)
             next.OnFocus();
@@ -108,11 +99,32 @@ public sealed class UIService : MonoBehaviour
         if (hud != null) hud.gameObject.SetActive(visible);
     }
 
+    private void RefreshPresentationState()
+    {
+        bool anyPaused = false;
+        bool anyHidesHud = false;
+        for (int i = 0; i < stack.Count; i++)
+        {
+            UIPanelCatalog.Entry remaining = catalog != null ? catalog.Find(stack[i]) : null;
+            anyPaused |= remaining != null && remaining.pauseGameplay;
+            anyHidesHud |= remaining != null && remaining.hideHud;
+        }
+
+        SetUiPause(anyPaused);
+        SetHudVisible(!anyHidesHud);
+    }
+
+    private void SetUiPause(bool paused)
+    {
+        PauseService pause = GameRoot.Instance != null ? GameRoot.Instance.Pause : null;
+        if (pause != null) pause.SetPaused(this, paused);
+    }
+
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         instances.Clear();
         stack.Clear();
-        Time.timeScale = 1f;
+        SetUiPause(false);
         ResolveRoot();
     }
 

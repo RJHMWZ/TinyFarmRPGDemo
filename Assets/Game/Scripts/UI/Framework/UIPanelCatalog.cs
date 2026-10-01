@@ -17,6 +17,7 @@ public sealed class UIPanelCatalog : ScriptableObject
     }
 
     [SerializeField] private List<Entry> entries = new List<Entry>();
+    public IReadOnlyList<Entry> Entries => entries;
 
     public Entry Find(string id)
     {
