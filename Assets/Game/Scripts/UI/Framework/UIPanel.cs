@@ -1,8 +1,11 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CanvasGroup))]
+[DisallowMultipleComponent]
 public class UIPanel : MonoBehaviour
 {
+    private CanvasGroup canvasGroup;
+
     public virtual void OnCreate() { }
     public virtual void OnOpen(object args) { }
     public virtual void OnFocus() { }
@@ -11,10 +14,10 @@ public class UIPanel : MonoBehaviour
 
     public void SetVisible(bool visible)
     {
-        CanvasGroup group = GetComponent<CanvasGroup>();
-        group.alpha = visible ? 1f : 0f;
-        group.interactable = visible;
-        group.blocksRaycasts = visible;
+        if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
+        canvasGroup.alpha = visible ? 1f : 0f;
+        canvasGroup.interactable = visible;
+        canvasGroup.blocksRaycasts = visible;
         gameObject.SetActive(visible);
     }
 }

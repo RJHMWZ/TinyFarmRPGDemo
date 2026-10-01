@@ -12,7 +12,7 @@ using UnityEngine;
     fileName = "PlayerPartAnimation",
     menuName = "Game/Player/Part Animation Set"
 )]
-public class PlayerPartAnimationSet : ScriptableObject
+public sealed class PlayerPartAnimationSet : ScriptableObject
 {
     [Header("Idle - 16帧")]
     [Tooltip("4方向 × 每方向4帧")]
@@ -73,7 +73,7 @@ public class PlayerPartAnimationSet : ScriptableObject
         int directionBlock = GetDirectionBlock(direction);
 
         // 取模使超出末帧的序号回到开头，从而形成循环动画。
-        int frame = frameIndex % framesPerDirection;
+        int frame = ((frameIndex % framesPerDirection) + framesPerDirection) % framesPerDirection;
 
         // 一维数组下标 = 第几个方向块 * 每块帧数 + 块内第几帧。
         // 例如 Walk/Left，leftBlock=2、frameIndex=3，则下标为 2*6+3=15。
@@ -97,6 +97,37 @@ public class PlayerPartAnimationSet : ScriptableObject
             default:
                 return IdleFramesPerDirection;
         }
+    }
+
+    /// <summary>Checks the authored frame layout used by the custom animation player.</summary>
+    public bool IsValid(out string error)
+    {
+        if (idleFrames == null || idleFrames.Length < IdleFramesPerDirection * 4)
+        {
+            error = "Idle must contain at least 16 frames.";
+            return false;
+        }
+        if (walkFrames == null || walkFrames.Length < WalkFramesPerDirection * 4)
+        {
+            error = "Walk must contain at least 24 frames.";
+            return false;
+        }
+
+        int mask = 0;
+        int[] blocks = { downBlock, upBlock, leftBlock, rightBlock };
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            int block = blocks[i];
+            if (block < 0 || block > 3 || (mask & 1 << block) != 0)
+            {
+                error = "Direction blocks must each use a unique value from 0 to 3.";
+                return false;
+            }
+            mask |= 1 << block;
+        }
+
+        error = string.Empty;
+        return true;
     }
 
     /// <summary>

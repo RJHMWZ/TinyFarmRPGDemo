@@ -35,8 +35,8 @@ public sealed class SaveSelectView : MonoBehaviour
             if (panelTitle == null || description == null || primaryActionButton == null ||
                 primaryActionLabel == null || deleteButton == null || deleteButtonLabel == null ||
                 backButton == null || slotButtons == null || slotLabels == null ||
-                slotButtons.Length != CharacterCreationSave.SlotCount ||
-                slotLabels.Length != CharacterCreationSave.SlotCount)
+                slotButtons.Length != SaveService.SlotCount ||
+                slotLabels.Length != SaveService.SlotCount)
                 return false;
 
             for (int i = 0; i < slotButtons.Length; i++)

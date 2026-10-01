@@ -54,9 +54,11 @@ public static class CharacterAppearanceDatabaseBuilder
             int gender = a.Gender.CompareTo(b.Gender);
             return gender != 0 ? gender : EditorUtility.NaturalCompare(a.DisplayName, b.DisplayName);
         });
+        if (database.MatchesEntries(entries)) return;
+
         database.ReplaceEntries(entries);
         EditorUtility.SetDirty(database);
-        AssetDatabase.SaveAssets();
+        AssetDatabase.SaveAssetIfDirty(database);
         Debug.Log("Character appearance database rebuilt: " + entries.Count + " items.", database);
     }
 

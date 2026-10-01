@@ -14,6 +14,9 @@ public sealed class GameRoot : MonoBehaviour
     public UIService UI { get; private set; }
     public GameFlowController Flow { get; private set; }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState() => Instance = null;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)

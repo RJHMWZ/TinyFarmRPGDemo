@@ -41,7 +41,7 @@ public sealed class PauseService : MonoBehaviour
         if (wasPaused != isPaused) PauseChanged?.Invoke(isPaused);
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         if (owners.Count > 0) Time.timeScale = resumeTimeScale;
         owners.Clear();

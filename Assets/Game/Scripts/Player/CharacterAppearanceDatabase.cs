@@ -47,7 +47,11 @@ public sealed class CharacterAppearanceDatabase : ScriptableObject
     }
 
     [SerializeField] private List<Entry> entries = new List<Entry>();
+    private Dictionary<string, Entry> entriesById;
+
     public IReadOnlyList<Entry> Entries => entries;
+
+    private void OnEnable() => RebuildIndex();
 
     /// <summary>
     /// 将指定分类和性别可用的项目写入调用方提供的列表。
@@ -75,14 +79,45 @@ public sealed class CharacterAppearanceDatabase : ScriptableObject
     public Entry Find(string id)
     {
         if (string.IsNullOrEmpty(id)) return null;
-        return entries.Find(entry => entry != null && entry.Id == id);
+        if (entriesById == null) RebuildIndex();
+        entriesById.TryGetValue(id, out Entry entry);
+        return entry;
+    }
+
+    private void RebuildIndex()
+    {
+        entriesById = new Dictionary<string, Entry>(StringComparer.Ordinal);
+        if (entries == null) return;
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            Entry entry = entries[i];
+            if (entry == null || string.IsNullOrEmpty(entry.Id) || entriesById.ContainsKey(entry.Id)) continue;
+            entriesById.Add(entry.Id, entry);
+        }
     }
 
 #if UNITY_EDITOR
+    public bool MatchesEntries(IReadOnlyList<Entry> other)
+    {
+        if (other == null || entries == null || entries.Count != other.Count) return false;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            Entry current = entries[i];
+            Entry candidate = other[i];
+            if (current == null || candidate == null || current.Id != candidate.Id ||
+                current.DisplayName != candidate.DisplayName || current.Category != candidate.Category ||
+                current.Gender != candidate.Gender || current.AnimationSet != candidate.AnimationSet)
+                return false;
+        }
+        return true;
+    }
+
     /// <summary>仅供编辑器构建器整体替换自动生成的数据。</summary>
     public void ReplaceEntries(List<Entry> newEntries)
     {
         entries = newEntries ?? new List<Entry>();
+        RebuildIndex();
     }
 #endif
 }

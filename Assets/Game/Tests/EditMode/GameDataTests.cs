@@ -12,9 +12,13 @@ public sealed class GameDataTests
             metadata = null,
             player = null,
             world = null,
-            quests = null,
-            relationships = null,
-            unlocks = null
+            quests = new QuestSaveData { activeQuestIds = null, completedQuestIds = null },
+            relationships = new RelationshipSaveData
+            {
+                npcIds = new[] { "npc-a", "npc-b" },
+                friendshipValues = new[] { 10 }
+            },
+            unlocks = new UnlockSaveData { unlockedIds = null }
         };
 
         data.Normalize();
@@ -24,8 +28,15 @@ public sealed class GameDataTests
         Assert.That(data.player.appearance, Is.Not.Null);
         Assert.That(data.world, Is.Not.Null);
         Assert.That(data.quests, Is.Not.Null);
+        Assert.That(data.quests.activeQuestIds, Is.Not.Null);
+        Assert.That(data.quests.completedQuestIds, Is.Not.Null);
         Assert.That(data.relationships, Is.Not.Null);
+        Assert.That(data.relationships.npcIds, Is.Not.Null);
+        Assert.That(data.relationships.friendshipValues, Is.Not.Null);
+        Assert.That(data.relationships.friendshipValues, Has.Length.EqualTo(2));
+        Assert.That(data.relationships.friendshipValues[0], Is.EqualTo(10));
         Assert.That(data.unlocks, Is.Not.Null);
+        Assert.That(data.unlocks.unlockedIds, Is.Not.Null);
     }
 
     [Test]

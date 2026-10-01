@@ -20,14 +20,33 @@ public sealed class CharacterNameDatabase : ScriptableObject
     [Tooltip("Locale used when the character creation panel opens.")]
     [SerializeField] private string defaultLocaleCode = "en";
     [SerializeField] private List<NamePool> pools = new List<NamePool>();
+    private Dictionary<string, NamePool> poolsByLocale;
 
     public string DefaultLocaleCode => defaultLocaleCode;
     public IReadOnlyList<NamePool> Pools => pools;
 
+    private void OnEnable() => RebuildIndex();
+
     public NamePool FindPool(string localeCode)
     {
         if (string.IsNullOrWhiteSpace(localeCode)) return null;
-        return pools.Find(pool => pool != null &&
-            string.Equals(pool.LocaleCode, localeCode, StringComparison.OrdinalIgnoreCase));
+        if (poolsByLocale == null) RebuildIndex();
+        poolsByLocale.TryGetValue(localeCode, out NamePool pool);
+        return pool;
+    }
+
+    private void RebuildIndex()
+    {
+        poolsByLocale = new Dictionary<string, NamePool>(StringComparer.OrdinalIgnoreCase);
+        if (pools == null) return;
+
+        for (int i = 0; i < pools.Count; i++)
+        {
+            NamePool pool = pools[i];
+            if (pool == null || string.IsNullOrWhiteSpace(pool.LocaleCode) ||
+                poolsByLocale.ContainsKey(pool.LocaleCode))
+                continue;
+            poolsByLocale.Add(pool.LocaleCode, pool);
+        }
     }
 }

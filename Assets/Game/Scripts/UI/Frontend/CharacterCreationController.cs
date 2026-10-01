@@ -8,6 +8,8 @@ using UnityEngine.UI;
 /// <summary>Coordinates character-creation data, view state, and confirmation flow.</summary>
 public sealed class CharacterCreationController : MonoBehaviour
 {
+    private const int PlayerNameCharacterLimit = 16;
+
     private sealed class Row
     {
         public PlayerAppearanceCategory Category;
@@ -43,12 +45,8 @@ public sealed class CharacterCreationController : MonoBehaviour
     private bool initialized;
     private bool eventsBound;
     private bool isConfirming;
-    private bool startWithNewProfile;
 
-    public CharacterCreationProfile CurrentProfile => profile;
-    public GameDataCatalog DataCatalog => dataCatalog;
-
-    public void Configure(MainMenuController owner) => frontEnd = owner;
+    internal void Configure(MainMenuController owner) => frontEnd = owner;
 
     private void Awake() => Initialize();
 
@@ -71,16 +69,15 @@ public sealed class CharacterCreationController : MonoBehaviour
     }
 
     /// <summary>Opens character creation with clean data without deleting an existing save first.</summary>
-    public void BeginNewGame()
+    internal void BeginNewGame()
     {
         bool wasInitialized = initialized;
-        startWithNewProfile = true;
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         if (wasInitialized) ResetForNewGame();
     }
 
     /// <summary>Returns to the title menu without modifying save data.</summary>
-    public void ReturnToMainMenu()
+    private void ReturnToMainMenu()
     {
         if (isConfirming) return;
         if (frontEnd == null)
@@ -93,7 +90,7 @@ public sealed class CharacterCreationController : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    public void Initialize()
+    private void Initialize()
     {
         if (initialized) return;
         if (view == null || !view.IsConfigured)
@@ -114,8 +111,9 @@ public sealed class CharacterCreationController : MonoBehaviour
         if (nameDatabase == null)
             Debug.LogWarning("CharacterNameDatabase is missing. English fallback name 'Player' will be used.", this);
 
-        profile = startWithNewProfile ? new CharacterCreationProfile() : CharacterCreationSave.Load();
+        profile = new CharacterCreationProfile();
         if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = GenerateRandomName();
+        view.NameInput.characterLimit = PlayerNameCharacterLimit;
         view.NameInput.text = profile.playerName;
 
         BuildRows();
@@ -161,25 +159,15 @@ public sealed class CharacterCreationController : MonoBehaviour
         }
     }
 
-    public void SetMale() => SetGender(PlayerGender.Male);
-    public void SetFemale() => SetGender(PlayerGender.Female);
+    private void SetMale() => SetGender(PlayerGender.Male);
+    private void SetFemale() => SetGender(PlayerGender.Female);
 
-    public void RandomizeName()
+    private void RandomizeName()
     {
         string value = GenerateRandomName();
         if (string.IsNullOrEmpty(value)) return;
         profile.playerName = value;
         view.NameInput.text = value;
-    }
-
-    public void RandomizeAppearance()
-    {
-        foreach (Row row in rows.Values)
-        {
-            if (row.Options.Count == 0) continue;
-            row.Index = UnityEngine.Random.Range(0, row.Options.Count);
-            Select(row, 0);
-        }
     }
 
     private void ResetForNewGame()
@@ -203,7 +191,7 @@ public sealed class CharacterCreationController : MonoBehaviour
         return string.IsNullOrEmpty(generatedName) ? "Player" : generatedName;
     }
 
-    public void Confirm()
+    private void Confirm()
     {
         if (isConfirming || profile == null) return;
         isConfirming = true;
@@ -216,8 +204,6 @@ public sealed class CharacterCreationController : MonoBehaviour
 
     private IEnumerator CompleteCharacterCreation()
     {
-        onConfirmed?.Invoke();
-        yield return null;
         if (GameRoot.Instance == null)
         {
             Debug.LogError("GameRoot is missing; cannot start a new game.", this);
@@ -225,24 +211,14 @@ public sealed class CharacterCreationController : MonoBehaviour
             view.StartGameButton.interactable = true;
             yield break;
         }
-        GameRoot.Instance.Flow.StartNewGame(profile);
-    }
 
-    public void ApplyTo(PlayerAppearance appearance)
-    {
-        if (appearance == null || database == null) return;
-        appearance.SetSkin(GetAnimation(PlayerAppearanceCategory.Skin));
-        appearance.SetClothes(GetAnimation(PlayerAppearanceCategory.Clothes));
-        appearance.SetEyes(GetAnimation(PlayerAppearanceCategory.Eyes));
-        appearance.SetHair(GetAnimation(PlayerAppearanceCategory.Hair));
-        appearance.SetAccessory(GetAnimation(PlayerAppearanceCategory.Accessory));
-        appearance.RefreshCurrentFrame();
-    }
+        onConfirmed?.Invoke();
+        yield return null;
+        if (GameRoot.Instance.Flow.StartNewGame(profile)) yield break;
 
-    private PlayerPartAnimationSet GetAnimation(PlayerAppearanceCategory category)
-    {
-        CharacterAppearanceDatabase.Entry entry = database.Find(profile.GetPartId(category));
-        return entry != null ? entry.AnimationSet : null;
+        isConfirming = false;
+        view.StartGameButton.interactable = true;
+        Debug.LogError("The new game could not be saved or the game flow is busy.", this);
     }
 
     private void SetGender(PlayerGender gender)

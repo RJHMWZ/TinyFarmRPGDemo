@@ -49,6 +49,13 @@ Keep title UI, save selection, and character creation outside gameplay scenes. F
 
 Feature rules belong to feature services and models, not to `UIService`.
 
+Runtime systems must use one state owner. Save access goes through `GameRoot.Saves`, selected-slot
+state through `GameSession`, input ownership through `InputModeService`, and pause ownership through
+`PauseService`. Do not add static compatibility facades or write directly to `Time.timeScale`.
+
+Frequently queried authored catalogs build non-serialized lookup dictionaries at runtime. Keep the
+serialized list as the Inspector source of truth and validate duplicate IDs during project checks.
+
 ## UI prefab policy
 
 Create panel source assets under `Assets/Game/Prefabs/UI` and register reusable gameplay panels in `UIPanelCatalog`.
@@ -96,8 +103,9 @@ Reports are written to `Artifacts/CI`, which is intentionally excluded from vers
 The validator checks:
 
 - required scene paths and Build Settings order;
+- missing scripts and required controller references inside Boot, MainMenu, and GameScene;
 - required `GameRoot` services;
-- character appearance and name catalogs;
+- character appearance, animation-frame layout, and name catalogs;
 - duplicate or incomplete UI panel registrations;
 - missing MonoBehaviour scripts on game-owned prefabs.
 

@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>Validates the project contracts that are easy to break while adding content.</summary>
 public static class ProjectHealthValidator
@@ -39,6 +41,7 @@ public static class ProjectHealthValidator
     {
         var errors = new List<string>();
         ValidateBuildScenes(errors);
+        ValidateSceneContents(errors);
         ValidateGameRoot(errors);
         ValidateData(errors);
         ValidateUiCatalog(errors);
@@ -47,6 +50,71 @@ public static class ProjectHealthValidator
 
         if (errors.Count > 0)
             throw new BuildFailedException("Project validation failed:\n- " + string.Join("\n- ", errors));
+    }
+
+    private static void ValidateSceneContents(List<string> errors)
+    {
+        for (int i = 0; i < RequiredScenes.Length; i++)
+        {
+            string path = RequiredScenes[i];
+            Scene scene = SceneManager.GetSceneByPath(path);
+            bool openedForValidation = !scene.IsValid() || !scene.isLoaded;
+            try
+            {
+                if (openedForValidation) scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+                ValidateMissingScripts(scene, path, errors);
+
+                if (path.EndsWith("/MainMenu.unity", System.StringComparison.Ordinal))
+                {
+                    MainMenuController[] controllers = FindSceneComponents<MainMenuController>(scene);
+                    if (controllers.Length != 1 || !controllers[0].IsConfigured)
+                        errors.Add("MainMenu scene must contain exactly one configured MainMenuController.");
+                }
+                else if (path.EndsWith("/GameScene.unity", System.StringComparison.Ordinal))
+                {
+                    UIRoot[] uiRoots = FindSceneComponents<UIRoot>(scene);
+                    if (uiRoots.Length != 1 || !uiRoots[0].IsConfigured)
+                        errors.Add("GameScene must contain exactly one configured UIRoot.");
+
+                    GameplayEntryPoint[] entryPoints = FindSceneComponents<GameplayEntryPoint>(scene);
+                    if (entryPoints.Length != 1 || !entryPoints[0].IsConfigured)
+                        errors.Add("GameScene must contain exactly one configured GameplayEntryPoint.");
+                }
+            }
+            catch (System.Exception exception)
+            {
+                errors.Add("Could not validate scene " + path + ": " + exception.Message);
+            }
+            finally
+            {
+                if (openedForValidation && scene.IsValid() && scene.isLoaded)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+    }
+
+    private static T[] FindSceneComponents<T>(Scene scene) where T : Component
+    {
+        var result = new List<T>();
+        GameObject[] roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+            result.AddRange(roots[i].GetComponentsInChildren<T>(true));
+        return result.ToArray();
+    }
+
+    private static void ValidateMissingScripts(Scene scene, string path, List<string> errors)
+    {
+        GameObject[] roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+        {
+            Transform[] transforms = roots[i].GetComponentsInChildren<Transform>(true);
+            for (int j = 0; j < transforms.Length; j++)
+            {
+                int missing = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transforms[j].gameObject);
+                if (missing > 0)
+                    errors.Add(path + " contains " + missing + " missing script(s) on " + transforms[j].name + ".");
+            }
+        }
     }
 
     private static void ValidateBuildScenes(List<string> errors)
@@ -101,6 +169,20 @@ public static class ProjectHealthValidator
 
         if (catalog.CharacterAppearances == null || catalog.CharacterAppearances.Entries.Count == 0)
             errors.Add("GameDataCatalog has no character appearance entries.");
+        else
+        {
+            IReadOnlyList<CharacterAppearanceDatabase.Entry> appearances = catalog.CharacterAppearances.Entries;
+            for (int i = 0; i < appearances.Count; i++)
+            {
+                CharacterAppearanceDatabase.Entry entry = appearances[i];
+                if (entry == null || entry.AnimationSet == null) continue;
+                if (!entry.AnimationSet.IsValid(out string error))
+                {
+                    string path = AssetDatabase.GetAssetPath(entry.AnimationSet);
+                    errors.Add("Invalid character animation set at " + path + ": " + error);
+                }
+            }
+        }
         if (catalog.CharacterNames == null || catalog.CharacterNames.Pools.Count == 0)
             errors.Add("GameDataCatalog has no character name pools.");
         else

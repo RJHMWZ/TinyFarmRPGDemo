@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>Loads panels, assigns layers, and maintains the UI back stack.</summary>
 public sealed class UIService : MonoBehaviour
@@ -9,20 +8,21 @@ public sealed class UIService : MonoBehaviour
     private readonly Dictionary<string, UIPanel> instances = new Dictionary<string, UIPanel>();
     private readonly List<string> stack = new List<string>();
     private UIRoot root;
+    private GameInputMode inputModeBeforeUi;
+    private bool ownsInputMode;
 
     private void OnEnable()
     {
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        UIRoot.ActiveChanged += OnRootChanged;
         ResolveRoot();
     }
 
     private void OnDisable()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        UIRoot.ActiveChanged -= OnRootChanged;
         SetUiPause(false);
+        RestoreInputMode();
     }
-
-    public void Configure(UIPanelCatalog value) => catalog = value;
 
     public UIPanel Open(string id, object args = null)
     {
@@ -58,7 +58,7 @@ public sealed class UIService : MonoBehaviour
         stack.Add(id);
 
         RefreshPresentationState();
-        GameRoot.Instance?.InputModes.SetMode(GameInputMode.UserInterface);
+        AcquireInputMode();
         return panel;
     }
 
@@ -72,7 +72,7 @@ public sealed class UIService : MonoBehaviour
     {
         UIPanelCatalog.Entry definition = catalog != null ? catalog.Find(id) : null;
         if (definition == null) return;
-        stack.Remove(id);
+        if (!stack.Remove(id)) return;
         if (instances.TryGetValue(id, out UIPanel panel) && panel != null)
         {
             panel.OnClose();
@@ -90,7 +90,7 @@ public sealed class UIService : MonoBehaviour
         if (stack.Count > 0 && instances.TryGetValue(stack[stack.Count - 1], out UIPanel next) && next != null)
             next.OnFocus();
         else
-            GameRoot.Instance?.InputModes.SetMode(GameInputMode.Gameplay);
+            RestoreInputMode();
     }
 
     private void SetHudVisible(bool visible)
@@ -120,15 +120,41 @@ public sealed class UIService : MonoBehaviour
         if (pause != null) pause.SetPaused(this, paused);
     }
 
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private void OnRootChanged(UIRoot nextRoot)
     {
-        UIRoot nextRoot = UIRoot.Active;
         if (nextRoot == root) return;
 
+        RestoreInputMode();
         instances.Clear();
         stack.Clear();
         SetUiPause(false);
         root = nextRoot;
+    }
+
+    private void AcquireInputMode()
+    {
+        InputModeService inputModes = GameRoot.Instance != null ? GameRoot.Instance.InputModes : null;
+        if (inputModes == null) return;
+
+        if (!ownsInputMode)
+        {
+            inputModeBeforeUi = inputModes.CurrentMode;
+            ownsInputMode = true;
+        }
+        inputModes.SetMode(GameInputMode.UserInterface);
+    }
+
+    /// <summary>
+    /// Restores the mode that was active before the first panel opened. If another system took
+    /// input ownership while the UI was open, its newer mode is preserved.
+    /// </summary>
+    private void RestoreInputMode()
+    {
+        if (!ownsInputMode) return;
+        InputModeService inputModes = GameRoot.Instance != null ? GameRoot.Instance.InputModes : null;
+        if (inputModes != null && inputModes.CurrentMode == GameInputMode.UserInterface)
+            inputModes.SetMode(inputModeBeforeUi);
+        ownsInputMode = false;
     }
 
     private void ResolveRoot()

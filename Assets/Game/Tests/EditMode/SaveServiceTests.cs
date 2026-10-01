@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 public sealed class SaveServiceTests
 {
@@ -48,6 +50,33 @@ public sealed class SaveServiceTests
     }
 
     [Test]
+    public void TryLoad_WhenCurrentSaveIsFromNewerVersion_DoesNotLoadStaleBackup()
+    {
+        Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Backup" })), Is.True);
+        Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Current" })), Is.True);
+        File.WriteAllText(Path.Combine(directory, "save-slot-1.json"),
+            "{\"saveVersion\":999,\"data\":{\"version\":999}}");
+
+        LogAssert.Expect(LogType.Error,
+            "Save file was created by a newer game version and cannot be loaded: " +
+            Path.Combine(directory, "save-slot-1.json"));
+        Assert.That(saves.TryLoad(0, out _), Is.False);
+        Assert.That(saves.IsSlotOccupied(0), Is.True);
+    }
+
+    [Test]
+    public void Save_WhenBackupAlreadyExists_ReplacesItWithPreviousSave()
+    {
+        Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "First" })), Is.True);
+        Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Second" })), Is.True);
+        Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Third" })), Is.True);
+        File.WriteAllText(Path.Combine(directory, "save-slot-1.json"), "{ damaged json");
+
+        Assert.That(saves.TryLoad(0, out GameSaveData recovered), Is.True);
+        Assert.That(recovered.player.appearance.playerName, Is.EqualTo("Second"));
+    }
+
+    [Test]
     public void Delete_RemovesCurrentBackupAndTemporaryFiles()
     {
         Assert.That(saves.Save(0, GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Robin" })), Is.True);
@@ -55,6 +84,7 @@ public sealed class SaveServiceTests
 
         Assert.That(saves.Delete(0), Is.True);
         Assert.That(saves.HasSave(0), Is.False);
+        Assert.That(saves.IsSlotOccupied(0), Is.False);
         Assert.That(Directory.GetFiles(directory, "save-slot-1.json*"), Is.Empty);
     }
 }

@@ -1,10 +1,19 @@
 using System;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 /// <summary>Owns versioned, atomic save-file persistence. It has no scene or UI dependencies.</summary>
 public sealed class SaveService
 {
+    private enum LoadStatus
+    {
+        Missing,
+        Loaded,
+        Invalid,
+        UnsupportedVersion
+    }
+
     [Serializable]
     private sealed class SaveEnvelope
     {
@@ -52,13 +61,15 @@ public sealed class SaveService
         try
         {
             Directory.CreateDirectory(saveDirectory);
-            File.WriteAllText(temporaryPath, JsonUtility.ToJson(new SaveEnvelope { data = data }, true));
+            WriteDurableText(temporaryPath, JsonUtility.ToJson(new SaveEnvelope { data = data }, true));
             if (File.Exists(path))
             {
-                File.Copy(path, backupPath, true);
-                File.Delete(path);
+                ReplaceWithBackup(temporaryPath, path, backupPath);
             }
-            File.Move(temporaryPath, path);
+            else
+            {
+                File.Move(temporaryPath, path);
+            }
             return true;
         }
         catch (Exception exception)
@@ -73,7 +84,15 @@ public sealed class SaveService
     {
         data = null;
         if (!IsValidSlot(slotIndex)) return false;
-        data = TryLoadCurrent(GetSavePath(slotIndex)) ?? TryLoadCurrent(GetSavePath(slotIndex) + ".bak");
+        string path = GetSavePath(slotIndex);
+        LoadStatus currentStatus = TryLoadCurrent(path, out data);
+        if (currentStatus == LoadStatus.UnsupportedVersion) return false;
+
+        if (data == null)
+        {
+            LoadStatus backupStatus = TryLoadCurrent(path + ".bak", out data);
+            if (backupStatus == LoadStatus.UnsupportedVersion) return false;
+        }
         if (data == null) data = TryLoadLegacy(slotIndex);
         if (data == null) return false;
         data.Normalize();
@@ -93,6 +112,18 @@ public sealed class SaveService
 
     public bool HasSave(int slotIndex) => TryLoad(slotIndex, out _);
 
+    /// <summary>
+    /// Returns true when any current, backup, temporary, or legacy file occupies the slot, even if
+    /// this game version cannot read it. UI uses this to prevent accidental overwrite of newer or
+    /// damaged saves that must not be presented as empty slots.
+    /// </summary>
+    public bool IsSlotOccupied(int slotIndex)
+    {
+        if (!IsValidSlot(slotIndex)) return false;
+        if (SaveFamilyExists(GetSavePath(slotIndex)) || SaveFamilyExists(GetLegacyPath(slotIndex))) return true;
+        return slotIndex == 0 && SaveFamilyExists(Path.Combine(saveDirectory, LegacySingleFile));
+    }
+
     public bool Delete(int slotIndex)
     {
         if (!IsValidSlot(slotIndex)) return false;
@@ -110,19 +141,27 @@ public sealed class SaveService
         }
     }
 
-    private static GameSaveData TryLoadCurrent(string path)
+    private static LoadStatus TryLoadCurrent(string path, out GameSaveData data)
     {
-        if (!File.Exists(path)) return null;
+        data = null;
+        if (!File.Exists(path)) return LoadStatus.Missing;
         try
         {
             SaveEnvelope envelope = JsonUtility.FromJson<SaveEnvelope>(File.ReadAllText(path));
-            if (envelope == null || envelope.data == null || envelope.saveVersion > CurrentSaveVersion) return null;
-            return Migrate(envelope.data, envelope.saveVersion);
+            if (envelope == null || envelope.data == null) return LoadStatus.Invalid;
+            if (envelope.saveVersion > CurrentSaveVersion)
+            {
+                Debug.LogError("Save file was created by a newer game version and cannot be loaded: " + path);
+                return LoadStatus.UnsupportedVersion;
+            }
+
+            data = Migrate(envelope.data, envelope.saveVersion);
+            return LoadStatus.Loaded;
         }
         catch (Exception exception)
         {
             Debug.LogWarning("Failed to read save file " + path + ": " + exception.Message);
-            return null;
+            return LoadStatus.Invalid;
         }
     }
 
@@ -152,8 +191,46 @@ public sealed class SaveService
     private static GameSaveData Migrate(GameSaveData data, int sourceVersion)
     {
         // Add sequential schema migrations here as saveVersion increases.
-        data.version = Mathf.Max(data.version, sourceVersion);
+        data.version = CurrentSaveVersion;
         return data;
+    }
+
+    private static void ReplaceWithBackup(string temporaryPath, string path, string backupPath)
+    {
+        try
+        {
+            // File.Replace performs the swap and backup as one filesystem operation where supported.
+            File.Replace(temporaryPath, path, backupPath);
+        }
+        catch (PlatformNotSupportedException)
+        {
+            ReplaceWithPortableFallback(temporaryPath, path, backupPath);
+        }
+        catch (IOException)
+        {
+            // Some Unity target filesystems do not implement File.Replace. The backup-first fallback
+            // still guarantees that at least one complete copy survives an interrupted write.
+            ReplaceWithPortableFallback(temporaryPath, path, backupPath);
+        }
+    }
+
+    private static void WriteDurableText(string path, string content)
+    {
+        using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+        {
+            writer.Write(content);
+            writer.Flush();
+            // Flush managed and operating-system buffers before the atomic swap.
+            stream.Flush(true);
+        }
+    }
+
+    private static void ReplaceWithPortableFallback(string temporaryPath, string path, string backupPath)
+    {
+        File.Copy(path, backupPath, true);
+        File.Delete(path);
+        File.Move(temporaryPath, path);
     }
 
     private static bool IsValidSlot(int slotIndex) => slotIndex >= 0 && slotIndex < SlotCount;
@@ -166,6 +243,9 @@ public sealed class SaveService
         TryDelete(path + ".bak");
         TryDelete(path + ".tmp");
     }
+
+    private static bool SaveFamilyExists(string path) =>
+        File.Exists(path) || File.Exists(path + ".bak") || File.Exists(path + ".tmp");
 
     private static void TryDelete(string path)
     {

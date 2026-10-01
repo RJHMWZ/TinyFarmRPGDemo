@@ -21,7 +21,10 @@ function Invoke-UnityStep {
     )
 
     Write-Host "Running Unity validation: $Name"
-    $process = Start-Process -FilePath $UnityPath -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+    $nativeArguments = foreach ($argument in $Arguments) {
+        if ($argument -match '\s') { '"' + $argument.Replace('"', '\"') + '"' } else { $argument }
+    }
+    $process = Start-Process -FilePath $UnityPath -ArgumentList $nativeArguments -Wait -PassThru -WindowStyle Hidden
     if ($process.ExitCode -ne 0) {
         throw "Unity validation failed: $Name (exit code $($process.ExitCode))."
     }

@@ -9,6 +9,12 @@ public sealed class GameFlowController : MonoBehaviour
 
     private IEnumerator Start()
     {
+        if (GameRoot.Instance == null)
+        {
+            Debug.LogError("GameRoot is unavailable; the top-level game flow cannot start.", this);
+            yield break;
+        }
+
         yield return null;
         if (SceneManager.GetActiveScene().name == GameSceneNames.Boot)
             yield return TransitionTo(GameSceneNames.MainMenu, GameInputMode.UserInterface);
@@ -19,17 +25,18 @@ public sealed class GameFlowController : MonoBehaviour
     public void SelectNewGameSlot(int slotIndex)
     {
         GameRoot.Instance.Session.SelectSlot(slotIndex);
-        CharacterCreationSave.SetActiveSlot(slotIndex);
     }
 
-    public void StartNewGame(CharacterCreationProfile profile)
+    /// <summary>Persists the new profile before entering gameplay. Returns false when the request was rejected.</summary>
+    public bool StartNewGame(CharacterCreationProfile profile)
     {
-        if (busy || profile == null) return;
+        if (busy || profile == null) return false;
         int slot = GameRoot.Instance.Session.ActiveSlot;
         GameSaveData data = GameSaveData.CreateNew(profile);
-        if (!GameRoot.Instance.Saves.Save(slot, data)) return;
+        if (!GameRoot.Instance.Saves.Save(slot, data)) return false;
         GameRoot.Instance.Session.SetLoadedGame(slot, data);
         StartCoroutine(TransitionTo(GameSceneNames.Gameplay, GameInputMode.Gameplay));
+        return true;
     }
 
     public void LoadGame(int slotIndex)
@@ -41,8 +48,12 @@ public sealed class GameFlowController : MonoBehaviour
             return;
         }
         GameRoot.Instance.Session.SetLoadedGame(slotIndex, data);
-        CharacterCreationSave.SetActiveSlot(slotIndex);
         string targetScene = string.IsNullOrWhiteSpace(data.world.currentScene) ? GameSceneNames.Gameplay : data.world.currentScene;
+        if (!GameRoot.Instance.Scenes.CanLoad(targetScene))
+        {
+            Debug.LogWarning("Saved scene is unavailable; loading the default gameplay scene instead: " + targetScene, this);
+            targetScene = GameSceneNames.Gameplay;
+        }
         StartCoroutine(TransitionTo(targetScene, GameInputMode.Gameplay));
     }
 
@@ -56,13 +67,25 @@ public sealed class GameFlowController : MonoBehaviour
     private IEnumerator TransitionTo(string sceneName, GameInputMode inputMode)
     {
         if (busy) yield break;
+        if (!GameRoot.Instance.Scenes.CanLoad(sceneName))
+        {
+            Debug.LogError("Cannot transition to a scene that is not in Build Settings: " + sceneName, this);
+            yield break;
+        }
+
         busy = true;
-        GameRoot.Instance.InputModes.SetMode(GameInputMode.Disabled);
-        yield return GameRoot.Instance.Transitions.FadeToBlack();
-        yield return GameRoot.Instance.Scenes.LoadSingle(sceneName);
-        yield return null;
-        GameRoot.Instance.InputModes.SetMode(inputMode);
-        yield return GameRoot.Instance.Transitions.FadeFromBlack();
-        busy = false;
+        try
+        {
+            GameRoot.Instance.InputModes.SetMode(GameInputMode.Disabled);
+            yield return GameRoot.Instance.Transitions.FadeToBlack();
+            yield return GameRoot.Instance.Scenes.LoadSingle(sceneName);
+            yield return null;
+            GameRoot.Instance.InputModes.SetMode(inputMode);
+            yield return GameRoot.Instance.Transitions.FadeFromBlack();
+        }
+        finally
+        {
+            busy = false;
+        }
     }
 }

@@ -15,11 +15,15 @@ public sealed class InputModeService : MonoBehaviour
     public GameInputMode CurrentMode { get; private set; } = GameInputMode.Disabled;
     public event Action<GameInputMode> ModeChanged;
 
+    private void OnEnable() => ApplyCursorState();
+
     public void SetMode(GameInputMode mode)
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;
-        Cursor.visible = mode != GameInputMode.Gameplay;
+        ApplyCursorState();
         ModeChanged?.Invoke(mode);
     }
+
+    private void ApplyCursorState() => Cursor.visible = CurrentMode != GameInputMode.Gameplay;
 }

@@ -6,7 +6,8 @@ using UnityEngine;
 /// 角色不是一张完整图片，而是由皮肤、衣服、眼睛、头发、饰品五张透明图片
 /// 按相同位置和顺序叠加而成。换装只需替换其中一层的 PlayerPartAnimationSet。
 /// </summary>
-public class PlayerAppearance : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class PlayerAppearance : MonoBehaviour
 {
     // 缓存最近显示的动画状态，换装后可以立即重绘，而不必等待动画控制器下一帧。
     private PlayerAnimationType currentAnimation = PlayerAnimationType.Idle;
@@ -47,6 +48,9 @@ public class PlayerAppearance : MonoBehaviour
     [SerializeField]
     private PlayerPartAnimationSet accessory;
 
+    public bool IsConfigured => skinRenderer != null && clothesRenderer != null && eyesRenderer != null &&
+                                hairRenderer != null && accessoryRenderer != null;
+
 
     /// <summary>
     /// 刷新整个角色的当前帧。
@@ -57,15 +61,11 @@ public class PlayerAppearance : MonoBehaviour
         currentAnimation = animationType;
         currentDirection = direction;
         currentFrameIndex = frameIndex;
-        SetPart(skinRenderer,skin,animationType,direction,frameIndex);
-
-        SetPart(clothesRenderer,clothes,animationType,direction,frameIndex);
-
-        SetPart(eyesRenderer,eyes,animationType,direction,frameIndex);
-
-        SetPart(hairRenderer,hair,animationType,direction,frameIndex);
-
-        SetPart(accessoryRenderer,accessory,animationType,direction,frameIndex);
+        SetPart(skinRenderer, skin, animationType, direction, frameIndex);
+        SetPart(clothesRenderer, clothes, animationType, direction, frameIndex);
+        SetPart(eyesRenderer, eyes, animationType, direction, frameIndex);
+        SetPart(hairRenderer, hair, animationType, direction, frameIndex);
+        SetPart(accessoryRenderer, accessory, animationType, direction, frameIndex);
     }
 
 

@@ -12,21 +12,21 @@ public sealed class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject savePanel;
     [SerializeField] private CharacterCreationController characterCreation;
 
-    private readonly UnityAction[] slotActions = new UnityAction[CharacterCreationSave.SlotCount];
+    private readonly UnityAction[] slotActions = new UnityAction[SaveService.SlotCount];
+    private readonly SaveMetadata[] slotMetadata = new SaveMetadata[SaveService.SlotCount];
+    private readonly bool[] slotHasSave = new bool[SaveService.SlotCount];
+    private readonly bool[] slotOccupied = new bool[SaveService.SlotCount];
     private MainMenuView menuView;
     private SaveSelectView saveView;
     private bool bindingsRegistered;
     private SavePanelMode panelMode;
     private int selectedSlot = -1;
     private int pendingDeleteSlot = -1;
+    private bool overwriteConfirmed;
 
-    public void Configure(GameObject menu, GameObject saves, CharacterCreationController creation)
-    {
-        menuPanel = menu;
-        savePanel = saves;
-        characterCreation = creation;
-        if (characterCreation != null) characterCreation.Configure(this);
-    }
+    public bool IsConfigured => menuPanel != null && savePanel != null && characterCreation != null &&
+                                menuPanel.GetComponent<MainMenuView>() != null &&
+                                savePanel.GetComponent<SaveSelectView>() != null;
 
     private void Awake()
     {
@@ -39,6 +39,9 @@ public sealed class MainMenuController : MonoBehaviour
         Bind(menuView.CreateGameButton, CreateNewGame);
         Bind(menuView.LoadGameButton, OpenSavePanel);
         Bind(menuView.ExitButton, ExitGame);
+        // Settings remain visible in the authored layout but are intentionally unavailable until
+        // the settings service and localization milestone are implemented.
+        menuView.SettingsButton.interactable = false;
         BindSavePanel();
         bindingsRegistered = true;
 
@@ -69,46 +72,51 @@ public sealed class MainMenuController : MonoBehaviour
             Unbind(saveView.GetSlotButton(i), slotActions[i]);
     }
 
-    public void CreateNewGame() => OpenSavePanel(SavePanelMode.Create);
-    public void OpenSavePanel() => OpenSavePanel(SavePanelMode.Load);
+    private void CreateNewGame() => OpenSavePanel(SavePanelMode.Create);
+    private void OpenSavePanel() => OpenSavePanel(SavePanelMode.Load);
 
-    public void ShowMainMenu()
+    internal void ShowMainMenu()
     {
         if (menuPanel != null) menuPanel.SetActive(true);
         if (characterCreation != null) characterCreation.gameObject.SetActive(false);
         CloseSavePanel();
     }
 
-    public void CloseSavePanel()
+    private void CloseSavePanel()
     {
         if (savePanel != null) savePanel.SetActive(false);
     }
 
-    public void ConfirmSelectedSlot()
+    private void ConfirmSelectedSlot()
     {
         if (selectedSlot < 0) return;
         if (panelMode == SavePanelMode.Create)
         {
-            if (CharacterCreationSave.HasSave(selectedSlot) && pendingDeleteSlot != -2)
+            SaveService saves = GetSaveService();
+            if (saves == null) return;
+            if (saves.IsSlotOccupied(selectedSlot) && !overwriteConfirmed)
             {
-                pendingDeleteSlot = -2;
+                overwriteConfirmed = true;
                 saveView.Description.text += "\nThis slot already has data. Click Create again to overwrite it.";
                 return;
             }
 
-            GameRoot.Instance.Flow.SelectNewGameSlot(selectedSlot);
+            GameRoot root = GameRoot.Instance;
+            if (root == null) return;
+            root.Flow.SelectNewGameSlot(selectedSlot);
             CloseSavePanel();
             menuPanel.SetActive(false);
             if (characterCreation != null) characterCreation.BeginNewGame();
             return;
         }
 
-        GameRoot.Instance.Flow.LoadGame(selectedSlot);
+        GameRoot.Instance?.Flow.LoadGame(selectedSlot);
     }
 
-    public void DeleteSelectedSlot()
+    private void DeleteSelectedSlot()
     {
-        if (selectedSlot < 0 || !CharacterCreationSave.HasSave(selectedSlot)) return;
+        SaveService saves = GetSaveService();
+        if (selectedSlot < 0 || saves == null || !saves.IsSlotOccupied(selectedSlot)) return;
         if (pendingDeleteSlot != selectedSlot)
         {
             pendingDeleteSlot = selectedSlot;
@@ -117,12 +125,16 @@ public sealed class MainMenuController : MonoBehaviour
             return;
         }
 
-        CharacterCreationSave.DeleteSlot(selectedSlot);
+        if (!saves.Delete(selectedSlot))
+        {
+            saveView.Description.text += "\nThe save could not be deleted. Check the log for details.";
+            return;
+        }
         pendingDeleteSlot = -1;
         RefreshSavePanel();
     }
 
-    public void ExitGame()
+    private void ExitGame()
     {
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
@@ -173,6 +185,7 @@ public sealed class MainMenuController : MonoBehaviour
         panelMode = mode;
         selectedSlot = -1;
         pendingDeleteSlot = -1;
+        overwriteConfirmed = false;
         RefreshSavePanel();
         savePanel.SetActive(true);
         savePanel.transform.SetAsLastSibling();
@@ -180,6 +193,9 @@ public sealed class MainMenuController : MonoBehaviour
 
     private void RefreshSavePanel()
     {
+        SaveService saves = GetSaveService();
+        if (saves == null) return;
+
         bool loading = panelMode == SavePanelMode.Load;
         saveView.PanelTitle.text = loading ? "Choose a Save to Load" : "Choose a Slot for New Game";
         saveView.PrimaryActionLabel.text = loading ? "Load" : "Create";
@@ -187,10 +203,13 @@ public sealed class MainMenuController : MonoBehaviour
 
         for (int i = 0; i < saveView.SlotCount; i++)
         {
-            bool hasSave = CharacterCreationSave.TryLoadProfile(i, out CharacterCreationProfile slotProfile);
-            saveView.GetSlotLabel(i).text = hasSave
-                ? "Slot " + (i + 1) + "  -  " + DisplayName(slotProfile)
-                : "Slot " + (i + 1) + "  -  Empty";
+            slotHasSave[i] = saves.TryReadMetadata(i, out slotMetadata[i]);
+            slotOccupied[i] = saves.IsSlotOccupied(i);
+            saveView.GetSlotLabel(i).text = slotHasSave[i]
+                ? "Slot " + (i + 1) + "  -  " + DisplayName(slotMetadata[i])
+                : slotOccupied[i]
+                    ? "Slot " + (i + 1) + "  -  Unavailable"
+                    : "Slot " + (i + 1) + "  -  Empty";
 
             Button button = saveView.GetSlotButton(i);
             if (button.image != null)
@@ -198,27 +217,39 @@ public sealed class MainMenuController : MonoBehaviour
         }
 
         bool selected = selectedSlot >= 0;
-        CharacterCreationProfile profile = null;
-        bool selectedHasSave = selected && CharacterCreationSave.TryLoadProfile(selectedSlot, out profile);
+        SaveMetadata selectedMetadata = selected ? slotMetadata[selectedSlot] : null;
+        bool selectedHasSave = selected && slotHasSave[selectedSlot];
+        bool selectedOccupied = selected && slotOccupied[selectedSlot];
         saveView.Description.text = !selected
             ? "Select one of the four save slots.\nSelecting a slot will not start the game."
             : selectedHasSave
-                ? "Slot " + (selectedSlot + 1) + "\nCharacter: " + DisplayName(profile) + "\nSave data is available."
+                ? "Slot " + (selectedSlot + 1) + "\nCharacter: " + DisplayName(selectedMetadata) + "\nSave data is available."
+                : selectedOccupied
+                    ? "Slot " + (selectedSlot + 1) + "\nSave data exists but cannot be loaded by this game version."
                 : "Slot " + (selectedSlot + 1) + "\nEmpty slot";
         saveView.PrimaryActionButton.interactable = selected && (!loading || selectedHasSave);
-        saveView.DeleteButton.interactable = selectedHasSave;
+        saveView.DeleteButton.interactable = selectedOccupied;
     }
 
     private void SelectSlot(int slotIndex)
     {
         selectedSlot = slotIndex;
         pendingDeleteSlot = -1;
+        overwriteConfirmed = false;
         RefreshSavePanel();
     }
 
-    private static string DisplayName(CharacterCreationProfile profile)
+    private static string DisplayName(SaveMetadata metadata)
     {
-        return profile == null || string.IsNullOrWhiteSpace(profile.playerName) ? "Unnamed" : profile.playerName;
+        return metadata == null || string.IsNullOrWhiteSpace(metadata.playerName) ? "Unnamed" : metadata.playerName;
+    }
+
+    private SaveService GetSaveService()
+    {
+        GameRoot root = GameRoot.Instance;
+        if (root != null) return root.Saves;
+        Debug.LogError("GameRoot is missing; save operations are unavailable.", this);
+        return null;
     }
 
     private static void Bind(Button button, UnityAction action)

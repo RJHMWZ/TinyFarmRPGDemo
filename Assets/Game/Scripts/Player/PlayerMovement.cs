@@ -6,7 +6,8 @@ using UnityEngine.InputSystem;
 /// 数据流：PlayerInput.inputactions 中的 Move 动作 -> moveAction -> moveInput-> Rigidbody2D.MovePosition。
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
-public class PlayerMovement : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class PlayerMovement : MonoBehaviour
 {
     [Header("Input")]
     [Tooltip("引用 PlayerInput.inputactions 中 Player/Move 动作；需要在 Inspector 中赋值。")]
@@ -14,6 +15,7 @@ public class PlayerMovement : MonoBehaviour
     private InputActionReference moveAction;
 
     [Header("Movement")]
+    [Min(0f)]
     [SerializeField]
     private float moveSpeed = 3f;
 
@@ -44,6 +46,11 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        if (moveAction == null || moveAction.action == null)
+        {
+            Debug.LogError("PlayerMovement requires a valid Move InputActionReference.", this);
+            enabled = false;
+        }
     }
 
     private void OnEnable()
@@ -55,11 +62,19 @@ public class PlayerMovement : MonoBehaviour
     private void OnDisable()
     {
         // 组件停用时同步停用 Action，防止无效监听或重复启用。
-        moveAction.action.Disable();
+        moveInput = Vector2.zero;
+        if (moveAction != null && moveAction.action != null) moveAction.action.Disable();
     }
 
     private void Update()
     {
+        GameRoot root = GameRoot.Instance;
+        if (root != null && root.InputModes.CurrentMode != GameInputMode.Gameplay)
+        {
+            moveInput = Vector2.zero;
+            return;
+        }
+
         // Move 是 Value/Vector2 类型。WASD 或方向键的 2D Vector Composite
         // 会被 Input System 合成为一个 Vector2，而不是分别读取四个按键。
         moveInput = moveAction.action.ReadValue<Vector2>();
@@ -73,6 +88,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (moveInput.sqrMagnitude <= 0f) return;
         Vector2 targetPosition = rb.position + moveInput * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(targetPosition);
     }

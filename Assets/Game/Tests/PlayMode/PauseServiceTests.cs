@@ -37,4 +37,30 @@ public sealed class PauseServiceTests
 
         yield return null;
     }
+
+    [UnityTest]
+    public IEnumerator DisablingService_ReleasesOwnedPause()
+    {
+        float originalTimeScale = Time.timeScale;
+        GameObject host = new GameObject("PauseServiceDisableTests");
+        PauseService pause = host.AddComponent<PauseService>();
+
+        try
+        {
+            Time.timeScale = 0.75f;
+            pause.SetPaused(this, true);
+            Assert.That(Time.timeScale, Is.Zero);
+
+            host.SetActive(false);
+            Assert.That(Time.timeScale, Is.EqualTo(0.75f));
+            Assert.That(pause.IsPaused, Is.False);
+        }
+        finally
+        {
+            Object.Destroy(host);
+            Time.timeScale = originalTimeScale;
+        }
+
+        yield return null;
+    }
 }

@@ -29,6 +29,18 @@ public sealed class GameSaveData
         if (quests == null) quests = new QuestSaveData();
         if (relationships == null) relationships = new RelationshipSaveData();
         if (unlocks == null) unlocks = new UnlockSaveData();
+        if (quests.activeQuestIds == null) quests.activeQuestIds = Array.Empty<string>();
+        if (quests.completedQuestIds == null) quests.completedQuestIds = Array.Empty<string>();
+        if (relationships.npcIds == null) relationships.npcIds = Array.Empty<string>();
+        if (relationships.friendshipValues == null) relationships.friendshipValues = Array.Empty<int>();
+        if (relationships.friendshipValues.Length != relationships.npcIds.Length)
+            Array.Resize(ref relationships.friendshipValues, relationships.npcIds.Length);
+        if (unlocks.unlockedIds == null) unlocks.unlockedIds = Array.Empty<string>();
+        if (string.IsNullOrWhiteSpace(world.currentScene)) world.currentScene = GameSceneNames.Gameplay;
+        world.year = Math.Max(1, world.year);
+        world.day = Math.Max(1, world.day);
+        world.hour = Math.Max(0, Math.Min(23, world.hour));
+        world.minute = Math.Max(0, Math.Min(59, world.minute));
         if (string.IsNullOrWhiteSpace(metadata.playerName)) metadata.playerName = player.appearance.playerName;
     }
 }

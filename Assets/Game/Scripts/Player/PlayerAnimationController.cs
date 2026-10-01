@@ -5,7 +5,8 @@ using UnityEngine;
 /// 它根据 PlayerMovement 决定 Idle/Walk 和朝向，使用计时器推进 frameIndex，
 /// 再让 PlayerAppearance 把对应 Sprite 同步设置到所有外观图层。
 /// </summary>
-public class PlayerAnimationController : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class PlayerAnimationController : MonoBehaviour
 {
     [Header("引用")]
     [SerializeField]
@@ -15,9 +16,11 @@ public class PlayerAnimationController : MonoBehaviour
     private PlayerAppearance appearance;
 
     [Header("动画速度")]
+    [Min(0.01f)]
     [SerializeField]
     private float idleFPS = 4f;
 
+    [Min(0.01f)]
     [SerializeField]
     private float walkFPS = 8f;
 
@@ -29,6 +32,13 @@ public class PlayerAnimationController : MonoBehaviour
 
     private float frameTimer; // 当前帧已经显示了多少秒。
 
+    private void Awake()
+    {
+        if (movement != null && appearance != null) return;
+        Debug.LogError("PlayerAnimationController requires PlayerMovement and PlayerAppearance references.", this);
+        enabled = false;
+    }
+
     private void Start()
     {
         RefreshFrame();
@@ -36,11 +46,6 @@ public class PlayerAnimationController : MonoBehaviour
 
     private void Update()
     {
-        if (movement == null || appearance == null)
-        {
-            return;
-        }
-
         UpdateState();
 
         UpdateDirection();
@@ -78,28 +83,27 @@ public class PlayerAnimationController : MonoBehaviour
         Vector2 input = movement.MoveInput;
         PlayerDirection newDirection;
 
-        // 斜向输入时只显示一个四方向动画：哪个轴的绝对值更大，就采用哪个轴。
-        // 两轴相等时进入纵向分支，所以 W+D 会显示 Up，S+D 会显示 Down。
+        // 斜向输入只显示一个四方向动画；绝对值相等时优先采用横向。
         if (Mathf.Abs(input.x) >= Mathf.Abs(input.y))
         {
             if (input.x > 0f)
             {
-                newDirection =PlayerDirection.Right;
+                newDirection = PlayerDirection.Right;
             }
             else
             {
-                newDirection =PlayerDirection.Left;
+                newDirection = PlayerDirection.Left;
             }
         }
         else
         {
             if (input.y > 0f)
             {
-                newDirection =PlayerDirection.Up;
+                newDirection = PlayerDirection.Up;
             }
             else
             {
-                newDirection =PlayerDirection.Down;
+                newDirection = PlayerDirection.Down;
             }
         }
 
@@ -108,7 +112,7 @@ public class PlayerAnimationController : MonoBehaviour
             return;
         }
 
-        currentDirection =newDirection;
+        currentDirection = newDirection;
         ResetAnimation();
     }
 
@@ -120,23 +124,17 @@ public class PlayerAnimationController : MonoBehaviour
     private void UpdateFrame()
     {
         float fps = currentAnimation == PlayerAnimationType.Walk ? walkFPS : idleFPS;
+        if (fps <= 0f) return;
         float frameDuration = 1f / fps; // 例如 8 FPS 表示每帧显示 1/8 秒。
 
         frameTimer += Time.deltaTime;
-        if (frameTimer < frameDuration)
-        {
-            return;
-        }
-        // 使用减法而不是直接清零，可以保留超出一帧时长的零头，减少节奏漂移。
-        frameTimer -= frameDuration;
+        int elapsedFrames = Mathf.FloorToInt(frameTimer / frameDuration);
+        if (elapsedFrames <= 0) return;
+        // 保留不足一帧的余量，并在掉帧时一次追上多帧，避免动画实际速度随帧率降低。
+        frameTimer -= elapsedFrames * frameDuration;
 
-        int frameCount = appearance.GetFrameCount(currentAnimation);
-        frameIndex++;
-
-        if (frameIndex >= frameCount)
-        {
-            frameIndex = 0;
-        }
+        int frameCount = Mathf.Max(1, appearance.GetFrameCount(currentAnimation));
+        frameIndex = (frameIndex + elapsedFrames) % frameCount;
         RefreshFrame();
     }
 
