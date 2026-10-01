@@ -15,8 +15,9 @@ public sealed class SaveService
     [Serializable]
     private sealed class LegacyEnvelope
     {
-        public int saveVersion;
-        public CharacterCreationProfile profile;
+        // Explicit defaults document the legacy JSON contract and keep standalone C# builds warning-free.
+        public int saveVersion = 0;
+        public CharacterCreationProfile profile = null;
     }
 
     private const int CurrentSaveVersion = 2;

@@ -2,23 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum CharacterNameLanguage
-{
-    Chinese,
-    English,
-    Mixed
-}
-
-/// <summary>
-/// 可在运行时读取的角色名称总表。
-/// </summary>
+/// <summary>Authored character-name pools grouped by locale code.</summary>
 [CreateAssetMenu(fileName = "CharacterNameDatabase", menuName = "Tiny Farm/Character Name Database")]
 public sealed class CharacterNameDatabase : ScriptableObject
 {
     [Serializable]
     public sealed class NamePool
     {
-        [Tooltip("BCP-47 style locale code, for example zh-CN or en.")]
+        [Tooltip("BCP-47 style locale code, for example en or zh-CN.")]
         [SerializeField] private string localeCode;
         [SerializeField] private List<string> names = new List<string>();
 
@@ -27,7 +18,7 @@ public sealed class CharacterNameDatabase : ScriptableObject
     }
 
     [Tooltip("Locale used when the character creation panel opens.")]
-    [SerializeField] private string defaultLocaleCode = "zh-CN";
+    [SerializeField] private string defaultLocaleCode = "en";
     [SerializeField] private List<NamePool> pools = new List<NamePool>();
 
     public string DefaultLocaleCode => defaultLocaleCode;

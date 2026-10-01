@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -6,14 +5,9 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-/// <summary>
-/// 角色创建面板的总控制器。
-/// 数据流：CharacterAppearanceDatabase -> 可选外观列表 -> UI 预览/场景角色 -> CharacterCreationProfile 存档。
-/// 面板控件通过现有层级名称自动查找，因此增加资源时不需要修改场景引用或选项数量。
-/// </summary>
+/// <summary>Coordinates character-creation data, view state, and confirmation flow.</summary>
 public sealed class CharacterCreationController : MonoBehaviour
 {
-    /// <summary>缓存一行外观选择控件及其当前可用数据。</summary>
     private sealed class Row
     {
         public PlayerAppearanceCategory Category;
@@ -27,186 +21,157 @@ public sealed class CharacterCreationController : MonoBehaviour
         public int Index;
     }
 
-    [Header("数据与应用目标")]
-    [Tooltip("游戏静态数据的统一入口。")]
+    [Header("Data and flow")]
     [SerializeField] private GameDataCatalog dataCatalog;
-    [Tooltip("确认或切换选项时接收外观的场景角色。")]
     [SerializeField] private MainMenuController frontEnd;
+    [SerializeField] private CharacterCreationView view;
 
-    [Header("面板控件")]
-    [SerializeField] private TMP_InputField nameInput;
-    [Tooltip("预览区域的占位 Image；运行时会在其下创建五个叠加图层。")]
-    [SerializeField] private Image previewTemplate;
-    [SerializeField] private Image maleBackground;
-    [SerializeField] private Image femaleBackground;
+    [Header("Presentation")]
     [SerializeField] private Color selectedGenderColor = Color.white;
     [SerializeField] private Color normalGenderColor = new Color(0.72f, 0.72f, 0.72f, 1f);
-    [Tooltip("角色数据保存并应用完成后触发，可在 Inspector 中连接场景切换等后续流程。")]
     [SerializeField] private UnityEvent onConfirmed;
 
-    // 每种外观对应一行选择器；预览字典则保存运行时生成的五层 UI Image。
     private readonly Dictionary<PlayerAppearanceCategory, Row> rows =
         new Dictionary<PlayerAppearanceCategory, Row>();
     private readonly Dictionary<PlayerAppearanceCategory, Image> previews =
         new Dictionary<PlayerAppearanceCategory, Image>();
+
     private CharacterCreationProfile profile;
-    private bool initialized;
-    private bool isConfirming;
-    private Button startGameButton;
-    private Button returnButton;
-    private CharacterNameLanguage nameLanguage;
     private CharacterAppearanceDatabase database;
     private CharacterNameDatabase nameDatabase;
+    private UnityAction<string> nameChangedAction;
+    private bool initialized;
+    private bool eventsBound;
+    private bool isConfirming;
     private bool startWithNewProfile;
 
-    /// <summary>供后续创建存档、进入游戏等系统读取尚未或已经确认的角色资料。</summary>
     public CharacterCreationProfile CurrentProfile => profile;
     public GameDataCatalog DataCatalog => dataCatalog;
 
-    public void Configure(MainMenuController owner)
+    public void Configure(MainMenuController owner) => frontEnd = owner;
+
+    private void Awake() => Initialize();
+
+    private void OnDestroy()
     {
-        frontEnd = owner;
+        if (!eventsBound || view == null) return;
+
+        view.MaleButton.onClick.RemoveListener(SetMale);
+        view.FemaleButton.onClick.RemoveListener(SetFemale);
+        view.RandomNameButton.onClick.RemoveListener(RandomizeName);
+        view.StartGameButton.onClick.RemoveListener(Confirm);
+        view.ReturnButton.onClick.RemoveListener(ReturnToMainMenu);
+        if (nameChangedAction != null) view.NameInput.onValueChanged.RemoveListener(nameChangedAction);
+
+        foreach (Row row in rows.Values)
+        {
+            if (row.PreviousAction != null) row.Previous.onClick.RemoveListener(row.PreviousAction);
+            if (row.NextAction != null) row.Next.onClick.RemoveListener(row.NextAction);
+        }
     }
 
-    /// <summary>Opens character creation with clean data without deleting the existing save first.</summary>
+    /// <summary>Opens character creation with clean data without deleting an existing save first.</summary>
     public void BeginNewGame()
     {
         bool wasInitialized = initialized;
         startWithNewProfile = true;
         if (!gameObject.activeSelf) gameObject.SetActive(true);
-        if (wasInitialized)
-        {
-            ResetForNewGame();
-        }
+        if (wasInitialized) ResetForNewGame();
     }
 
-    /// <summary>Abandons the unfinished character and returns to the title menu without touching the save.</summary>
+    /// <summary>Returns to the title menu without modifying save data.</summary>
     public void ReturnToMainMenu()
     {
         if (isConfirming) return;
-
-        MainMenuController menu = frontEnd != null ? frontEnd : FindObjectOfType<MainMenuController>();
-        if (menu == null)
+        if (frontEnd == null)
         {
-            Debug.LogError("MainMenuController was not found.", this);
+            Debug.LogError("MainMenuController reference is missing.", this);
             return;
         }
 
-        menu.ShowMainMenu();
+        frontEnd.ShowMainMenu();
         gameObject.SetActive(false);
     }
 
-    private void Awake()
-    {
-        Initialize();
-    }
-
-    private void OnDestroy()
-    {
-        // 这些监听由本组件在运行时添加，销毁时清理以避免重复绑定。
-        foreach (Row row in rows.Values)
-        {
-            if (row.Previous != null && row.PreviousAction != null)
-                row.Previous.onClick.RemoveListener(row.PreviousAction);
-            if (row.Next != null && row.NextAction != null)
-                row.Next.onClick.RemoveListener(row.NextAction);
-        }
-    }
-
-    /// <summary>
-    /// 加载数据库和上次存档，并根据当前场景层级建立所有按钮监听。
-    /// 使用 initialized 防止组件被外部系统重复初始化。
-    /// </summary>
     public void Initialize()
     {
         if (initialized) return;
+        if (view == null || !view.IsConfigured)
+        {
+            Debug.LogError("CharacterCreationView is missing or has incomplete references.", this);
+            enabled = false;
+            return;
+        }
+
         database = dataCatalog != null ? dataCatalog.CharacterAppearances : null;
         nameDatabase = dataCatalog != null ? dataCatalog.CharacterNames : null;
         if (database == null)
         {
             Debug.LogError("GameDataCatalog or its CharacterAppearanceDatabase is missing.", this);
+            enabled = false;
             return;
         }
         if (nameDatabase == null)
-            Debug.LogWarning("CharacterNameDatabase is missing. Assign the asset from Assets/Game/Data.", this);
+            Debug.LogWarning("CharacterNameDatabase is missing. English fallback name 'Player' will be used.", this);
 
-        AutoWire();
-        nameLanguage = LocaleToLanguage(nameDatabase != null ? nameDatabase.DefaultLocaleCode : "zh-CN");
         profile = startWithNewProfile ? new CharacterCreationProfile() : CharacterCreationSave.Load();
         if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = GenerateRandomName();
-        if (nameInput != null)
-        {
-            nameInput.text = profile.playerName;
-            nameInput.onValueChanged.AddListener(value => profile.playerName = value.Trim());
-        }
+        view.NameInput.text = profile.playerName;
 
         BuildRows();
+        BindEvents();
         SetGender(profile.gender);
         initialized = true;
     }
 
-    /// <summary>切换为男性，并重新过滤带有性别限制的外观资源。</summary>
+    private void BindEvents()
+    {
+        view.MaleButton.onClick.AddListener(SetMale);
+        view.FemaleButton.onClick.AddListener(SetFemale);
+        view.RandomNameButton.onClick.AddListener(RandomizeName);
+        view.StartGameButton.onClick.AddListener(Confirm);
+        view.ReturnButton.onClick.AddListener(ReturnToMainMenu);
+        nameChangedAction = value => profile.playerName = value.Trim();
+        view.NameInput.onValueChanged.AddListener(nameChangedAction);
+
+        foreach (Row row in rows.Values)
+        {
+            row.PreviousAction = () => Select(row, -1);
+            row.NextAction = () => Select(row, 1);
+            row.Previous.onClick.AddListener(row.PreviousAction);
+            row.Next.onClick.AddListener(row.NextAction);
+        }
+        eventsBound = true;
+    }
+
+    private void BuildRows()
+    {
+        rows.Clear();
+        IReadOnlyList<CharacterCreationView.AppearanceRow> configuredRows = view.AppearanceRows;
+        for (int i = 0; i < configuredRows.Count; i++)
+        {
+            CharacterCreationView.AppearanceRow configured = configuredRows[i];
+            rows.Add(configured.Category, new Row
+            {
+                Category = configured.Category,
+                Number = configured.NumberLabel,
+                Previous = configured.PreviousButton,
+                Next = configured.NextButton
+            });
+        }
+    }
+
     public void SetMale() => SetGender(PlayerGender.Male);
-    /// <summary>切换为女性，并重新过滤带有性别限制的外观资源。</summary>
     public void SetFemale() => SetGender(PlayerGender.Female);
 
-    /// <summary>从候选名字中随机一个名字，并同步输入框。</summary>
     public void RandomizeName()
     {
         string value = GenerateRandomName();
         if (string.IsNullOrEmpty(value)) return;
         profile.playerName = value;
-        if (nameInput != null) nameInput.text = value;
+        view.NameInput.text = value;
     }
 
-    private void ResetForNewGame()
-    {
-        profile = new CharacterCreationProfile();
-        profile.playerName = GenerateRandomName();
-        if (nameInput != null) nameInput.text = profile.playerName;
-        SetGender(profile.gender);
-        isConfirming = false;
-        if (startGameButton != null) startGameButton.interactable = true;
-
-        CanvasGroup panelGroup = GetComponent<CanvasGroup>();
-        if (panelGroup != null)
-        {
-            panelGroup.alpha = 1f;
-            panelGroup.interactable = true;
-            panelGroup.blocksRaycasts = true;
-        }
-    }
-
-    public void UseChineseNames() => nameLanguage = CharacterNameLanguage.Chinese;
-    public void UseEnglishNames() => nameLanguage = CharacterNameLanguage.English;
-    public void UseMixedNames() => nameLanguage = CharacterNameLanguage.Mixed;
-
-    public void SetNameLanguage(CharacterNameLanguage language)
-    {
-        nameLanguage = language;
-    }
-
-    private string GenerateRandomName()
-    {
-        string generatedName = nameLanguage == CharacterNameLanguage.Mixed
-            ? CharacterNameGenerator.GetRandomNameFromAllPools(nameDatabase)
-            : CharacterNameGenerator.GetRandomName(nameDatabase, LanguageToLocale(nameLanguage));
-        return string.IsNullOrEmpty(generatedName) ? "Player" : generatedName;
-    }
-
-    private static string LanguageToLocale(CharacterNameLanguage language)
-    {
-        return language == CharacterNameLanguage.English ? "en" : "zh-CN";
-    }
-
-    private static CharacterNameLanguage LocaleToLanguage(string localeCode)
-    {
-        return !string.IsNullOrEmpty(localeCode) && localeCode.StartsWith("en", StringComparison.OrdinalIgnoreCase)
-            ? CharacterNameLanguage.English
-            : CharacterNameLanguage.Chinese;
-    }
-
-    /// <summary>在每个已有选择行中随机选择一项外观。</summary>
     public void RandomizeAppearance()
     {
         foreach (Row row in rows.Values)
@@ -217,21 +182,35 @@ public sealed class CharacterCreationController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 校验名字、持久化当前资料、应用到角色，最后通知后续游戏流程。
-    /// 此方法可以直接绑定到面板的“确认/开始”按钮。
-    /// </summary>
+    private void ResetForNewGame()
+    {
+        profile = new CharacterCreationProfile { playerName = GenerateRandomName() };
+        view.NameInput.text = profile.playerName;
+        SetGender(profile.gender);
+        isConfirming = false;
+        view.StartGameButton.interactable = true;
+
+        CanvasGroup panelGroup = GetComponent<CanvasGroup>();
+        if (panelGroup == null) return;
+        panelGroup.alpha = 1f;
+        panelGroup.interactable = true;
+        panelGroup.blocksRaycasts = true;
+    }
+
+    private string GenerateRandomName()
+    {
+        string generatedName = CharacterNameGenerator.GetRandomName(nameDatabase, "en");
+        return string.IsNullOrEmpty(generatedName) ? "Player" : generatedName;
+    }
+
     public void Confirm()
     {
         if (isConfirming || profile == null) return;
         isConfirming = true;
-        if (startGameButton != null) startGameButton.interactable = false;
+        view.StartGameButton.interactable = false;
 
-        if (nameInput != null) profile.playerName = nameInput.text.Trim();
-        if (string.IsNullOrWhiteSpace(profile.playerName))
-        {
-            RandomizeName();
-        }
+        profile.playerName = view.NameInput.text.Trim();
+        if (string.IsNullOrWhiteSpace(profile.playerName)) RandomizeName();
         StartCoroutine(CompleteCharacterCreation());
     }
 
@@ -243,13 +222,12 @@ public sealed class CharacterCreationController : MonoBehaviour
         {
             Debug.LogError("GameRoot is missing; cannot start a new game.", this);
             isConfirming = false;
-            if (startGameButton != null) startGameButton.interactable = true;
+            view.StartGameButton.interactable = true;
             yield break;
         }
         GameRoot.Instance.Flow.StartNewGame(profile);
     }
 
-    /// <summary>把资料中的五个稳定资源 ID 解析为动画资源并应用到指定角色。</summary>
     public void ApplyTo(PlayerAppearance appearance)
     {
         if (appearance == null || database == null) return;
@@ -261,59 +239,17 @@ public sealed class CharacterCreationController : MonoBehaviour
         appearance.RefreshCurrentFrame();
     }
 
-    /// <summary>按照当前资料保存的 ID 从数据库取得具体动画资源。</summary>
     private PlayerPartAnimationSet GetAnimation(PlayerAppearanceCategory category)
     {
         CharacterAppearanceDatabase.Entry entry = database.Find(profile.GetPartId(category));
         return entry != null ? entry.AnimationSet : null;
     }
 
-    /// <summary>把现有面板的各个选择区域转换为运行时 Row。</summary>
-    private void BuildRows()
-    {
-        rows.Clear();
-        AddRow(PlayerAppearanceCategory.Skin, "SkinChooseBg");
-        AddRow(PlayerAppearanceCategory.Clothes, "ClothesChooseBg");
-        AddRow(PlayerAppearanceCategory.Eyes, "EyesChooseBg");
-        AddRow(PlayerAppearanceCategory.Hair, "HairsChooseBg");
-        AddRow(PlayerAppearanceCategory.Accessory, "AccessoryChooseBg", false);
-    }
-
-    /// <summary>
-    /// 查找一行中的左右按钮和数量文本，并注册循环切换事件。
-    /// 左右按钮即使同名，也能根据本地 X 坐标稳定区分。
-    /// </summary>
-    private void AddRow(PlayerAppearanceCategory category, string objectName, bool required = true)
-    {
-        Transform root = FindDescendant(transform, objectName);
-        if (root == null)
-        {
-            if (required) Debug.LogWarning("Character creation row not found: " + objectName, this);
-            return;
-        }
-
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        Array.Sort(buttons, (a, b) => a.transform.localPosition.x.CompareTo(b.transform.localPosition.x));
-        Row row = new Row
-        {
-            Category = category,
-            Number = FindComponent<TMP_Text>(root, "NumTMP"),
-            Previous = buttons.Length > 0 ? buttons[0] : null,
-            Next = buttons.Length > 1 ? buttons[buttons.Length - 1] : null
-        };
-        row.PreviousAction = () => Select(row, -1);
-        row.NextAction = () => Select(row, 1);
-        if (row.Previous != null) row.Previous.onClick.AddListener(row.PreviousAction);
-        if (row.Next != null) row.Next.onClick.AddListener(row.NextAction);
-        rows.Add(category, row);
-    }
-
-    /// <summary>更新性别，并保持仍然有效的原选择；无效时回退到该分类第一项。</summary>
     private void SetGender(PlayerGender gender)
     {
         profile.gender = gender;
-        if (maleBackground != null) maleBackground.color = gender == PlayerGender.Male ? selectedGenderColor : normalGenderColor;
-        if (femaleBackground != null) femaleBackground.color = gender == PlayerGender.Female ? selectedGenderColor : normalGenderColor;
+        view.MaleBackground.color = gender == PlayerGender.Male ? selectedGenderColor : normalGenderColor;
+        view.FemaleBackground.color = gender == PlayerGender.Female ? selectedGenderColor : normalGenderColor;
 
         foreach (Row row in rows.Values)
         {
@@ -325,15 +261,12 @@ public sealed class CharacterCreationController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 在一行的候选项中循环移动。取模计算可让第一项向左回到末项，反之亦然。
-    /// </summary>
     private void Select(Row row, int delta)
     {
         if (row.Options.Count == 0)
         {
             profile.SetPartId(row.Category, string.Empty);
-            if (row.Number != null) row.Number.text = "0";
+            row.Number.text = "0";
             UpdatePreview(row.Category, null);
             return;
         }
@@ -341,17 +274,13 @@ public sealed class CharacterCreationController : MonoBehaviour
         row.Index = (row.Index + delta + row.Options.Count) % row.Options.Count;
         CharacterAppearanceDatabase.Entry entry = row.Options[row.Index];
         profile.SetPartId(row.Category, entry.Id);
-        if (row.Number != null) row.Number.text = (row.Index + 1).ToString();
+        row.Number.text = (row.Index + 1).ToString();
         UpdatePreview(row.Category, entry.AnimationSet);
     }
 
-    /// <summary>
-    /// 使用各部件朝下待机的第一帧合成静态预览。
-    /// siblingIndex 与枚举顺序一致，确保皮肤在底层、饰品在最上层。
-    /// </summary>
     private void UpdatePreview(PlayerAppearanceCategory category, PlayerPartAnimationSet set)
     {
-        if (previewTemplate == null) return;
+        Image previewTemplate = view.PreviewTemplate;
         if (!previews.TryGetValue(category, out Image image))
         {
             GameObject layer = new GameObject("Preview_" + category, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -367,58 +296,16 @@ public sealed class CharacterCreationController : MonoBehaviour
             image.raycastTarget = false;
             previews.Add(category, image);
         }
+
         image.sprite = set != null ? set.GetSprite(PlayerAnimationType.Idle, PlayerDirection.Down, 0) : null;
         image.enabled = image.sprite != null;
         previewTemplate.enabled = false;
     }
 
-    /// <summary>按约定的对象名称自动寻找控件，使场景无需逐项拖拽引用。</summary>
-    private void AutoWire()
-    {
-        nameInput = nameInput != null ? nameInput : FindComponent<TMP_InputField>(transform, "NameInputField");
-        previewTemplate = previewTemplate != null ? previewTemplate : FindComponent<Image>(transform, "PlayerPreview");
-        maleBackground = maleBackground != null ? maleBackground : FindComponent<Image>(transform, "MaleBg");
-        femaleBackground = femaleBackground != null ? femaleBackground : FindComponent<Image>(transform, "FemaleBg");
-
-        BindButton("MaleBg", SetMale);
-        BindButton("FemaleBg", SetFemale);
-        BindButton("RandomNameBtn", RandomizeName);
-        startGameButton = BindButton("StartGameBtn", Confirm);
-        returnButton = BindButton("ReturnBtn", ReturnToMainMenu);
-    }
-
-    /// <summary>为现有图片对象补充或取得 Button，并绑定指定事件。</summary>
-    private Button BindButton(string objectName, UnityAction action)
-    {
-        Transform target = FindDescendant(transform, objectName);
-        if (target == null) return null;
-        Button button = target.GetComponent<Button>();
-        if (button == null) button = target.gameObject.AddComponent<Button>();
-        button.onClick.AddListener(action);
-        return button;
-    }
-
-    /// <summary>根据稳定 ID 查找候选项下标；旧资源不存在时返回 -1。</summary>
     private static int FindIndex(List<CharacterAppearanceDatabase.Entry> options, string id)
     {
         for (int i = 0; i < options.Count; i++)
             if (options[i].Id == id) return i;
         return -1;
-    }
-
-    /// <summary>在指定层级中按对象名称查找组件。</summary>
-    private static T FindComponent<T>(Transform root, string objectName) where T : Component
-    {
-        Transform target = FindDescendant(root, objectName);
-        return target != null ? target.GetComponent<T>() : null;
-    }
-
-    /// <summary>包括非激活对象在内，递归查找第一个同名子节点。</summary>
-    private static Transform FindDescendant(Transform root, string objectName)
-    {
-        Transform[] children = root.GetComponentsInChildren<Transform>(true);
-        for (int i = 0; i < children.Length; i++)
-            if (children[i].name == objectName) return children[i];
-        return null;
     }
 }

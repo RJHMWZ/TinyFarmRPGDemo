@@ -12,6 +12,7 @@ public static class ProjectHealthValidator
     private const string UiCatalogPath = "Assets/Game/Data/UI/UIPanelCatalog.asset";
     private const string MainMenuViewPath = "Assets/Game/Prefabs/UI/Frontend/MainMenuScreen.prefab";
     private const string SaveSelectViewPath = "Assets/Game/Prefabs/UI/Frontend/SaveSelectScreen.prefab";
+    private const string CharacterCreationViewPath = "Assets/Game/Prefabs/UI/Frontend/CharacterCreationScreen.prefab";
 
     private static readonly string[] RequiredScenes =
     {
@@ -102,6 +103,24 @@ public static class ProjectHealthValidator
             errors.Add("GameDataCatalog has no character appearance entries.");
         if (catalog.CharacterNames == null || catalog.CharacterNames.Pools.Count == 0)
             errors.Add("GameDataCatalog has no character name pools.");
+        else
+        {
+            if (!string.Equals(catalog.CharacterNames.DefaultLocaleCode, "en", System.StringComparison.OrdinalIgnoreCase))
+                errors.Add("English must remain the default name locale until localization is enabled.");
+
+            CharacterNameDatabase.NamePool englishNames = catalog.CharacterNames.FindPool("en");
+            bool hasEnglishName = false;
+            if (englishNames != null)
+            {
+                for (int i = 0; i < englishNames.Names.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(englishNames.Names[i])) continue;
+                    hasEnglishName = true;
+                    break;
+                }
+            }
+            if (!hasEnglishName) errors.Add("The English character-name pool is missing or empty.");
+        }
     }
 
     private static void ValidateUiCatalog(List<string> errors)
@@ -138,6 +157,13 @@ public static class ProjectHealthValidator
         SaveSelectView saveView = savePrefab != null ? savePrefab.GetComponent<SaveSelectView>() : null;
         if (saveView == null || !saveView.IsConfigured)
             errors.Add("SaveSelectView is missing or incomplete: " + SaveSelectViewPath);
+
+        GameObject characterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterCreationViewPath);
+        CharacterCreationView characterView = characterPrefab != null
+            ? characterPrefab.GetComponent<CharacterCreationView>()
+            : null;
+        if (characterView == null || !characterView.IsConfigured)
+            errors.Add("CharacterCreationView is missing or incomplete: " + CharacterCreationViewPath);
     }
 
     private static void ValidatePrefabs(List<string> errors)

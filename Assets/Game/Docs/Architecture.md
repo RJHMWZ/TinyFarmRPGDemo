@@ -71,6 +71,12 @@ Panel scripts should derive from `UIPanel` and use serialized references to thei
 
 If another system also needs to pause gameplay, call `GameRoot.Instance.Pause.SetPaused(owner, true)` and release the same owner with `false`. This prevents one system from resuming the game while another still owns a pause request.
 
+## Current language policy
+
+English is the only active game language in the current milestone. Character creation always generates names from the `en` pool, and project validation requires that pool to exist and contain at least one valid name.
+
+The `zh-CN` name pool remains stored in `CharacterNameDatabase` for future localization work, but runtime UI must not select it until a complete language service, translated text catalog, and font policy are introduced together.
+
 ## Save evolution
 
 Add new serializable feature data under `GameSaveData`. Increment the envelope version in `SaveService` and add sequential migration steps before shipping a changed schema. Existing character-only JSON files are imported automatically as version-two saves.

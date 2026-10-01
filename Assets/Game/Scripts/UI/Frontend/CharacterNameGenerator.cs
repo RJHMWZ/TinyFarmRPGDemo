@@ -10,26 +10,6 @@ public static class CharacterNameGenerator
         return pool != null ? Pick(pool.Names) : string.Empty;
     }
 
-    public static string GetRandomNameFromAllPools(CharacterNameDatabase database)
-    {
-        if (database == null) return string.Empty;
-        int total = 0;
-        for (int i = 0; i < database.Pools.Count; i++)
-            if (database.Pools[i] != null) total += CountValid(database.Pools[i].Names);
-        if (total == 0) return string.Empty;
-
-        int index = Random.Range(0, total);
-        for (int i = 0; i < database.Pools.Count; i++)
-        {
-            CharacterNameDatabase.NamePool pool = database.Pools[i];
-            if (pool == null) continue;
-            int count = CountValid(pool.Names);
-            if (index < count) return GetValidAt(pool.Names, index);
-            index -= count;
-        }
-        return string.Empty;
-    }
-
     private static string Pick(System.Collections.Generic.IReadOnlyList<string> names)
     {
         int count = CountValid(names);
