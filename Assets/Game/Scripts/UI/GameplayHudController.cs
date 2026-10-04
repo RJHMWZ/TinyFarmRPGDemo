@@ -12,7 +12,6 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class GameplayHudController : MonoBehaviour
 {
-    private const float SecondsPerTenGameMinutes = 7f;
     private Transform player;
     private GameSaveData save;
     private RectTransform hudLayer;
@@ -24,9 +23,10 @@ public sealed class GameplayHudController : MonoBehaviour
     private readonly TMP_Text[] hotbarLabels = new TMP_Text[12];
     private readonly Image[] hotbarImages = new Image[12];
     private GameObject modal;
-    private float clockTimer;
     private float hudRefreshTimer;
-    private float unsavedPlaySeconds;
+    private TMP_Text energyText;
+    private TMP_Text interactionText;
+    private FarmRuntime farm;
     private bool initialized;
     private SettingsService settings;
     private GameSettings preferences;
@@ -36,6 +36,8 @@ public sealed class GameplayHudController : MonoBehaviour
     private float baseCameraSize;
     private GameInputMode inputModeBeforeModal;
     private bool ownsModalInput;
+    private Coroutine toastRoutine;
+    private GameObject activeToast;
 
     public void Initialize(Transform playerTransform)
     {
@@ -52,6 +54,8 @@ public sealed class GameplayHudController : MonoBehaviour
         player = playerTransform;
         save = root.Session.CurrentSave;
         save.Normalize();
+        farm = FarmRuntime.Active;
+        if (farm != null) farm.Game.Feedback += OnFarmFeedback;
         hudLayer = uiRoot.GetLayer(UILayer.Hud);
         windowLayer = uiRoot.GetLayer(UILayer.Window);
         toastLayer = uiRoot.GetLayer(UILayer.Toast);
@@ -68,20 +72,6 @@ public sealed class GameplayHudController : MonoBehaviour
     {
         if (!initialized || save == null) return;
         HandleShortcuts();
-        if (GameRoot.Instance != null && !GameRoot.Instance.Pause.IsPaused)
-        {
-            float elapsed = Time.deltaTime;
-            unsavedPlaySeconds += elapsed;
-            clockTimer += elapsed;
-            if (clockTimer >= SecondsPerTenGameMinutes)
-            {
-                int steps = Mathf.FloorToInt(clockTimer / SecondsPerTenGameMinutes);
-                clockTimer -= steps * SecondsPerTenGameMinutes;
-                bool newDay = GameCalendar.AdvanceMinutes(save.world, steps * 10);
-                if (newDay) ShowToast("A new day begins.");
-                RefreshHud();
-            }
-        }
 
         hudRefreshTimer += Time.unscaledDeltaTime;
         if (hudRefreshTimer >= 0.25f)
@@ -95,6 +85,7 @@ public sealed class GameplayHudController : MonoBehaviour
     {
         GameRoot root = GameRoot.Instance;
         if (root == null || root.UI.IsOpen(SettingsPanel.PanelId) || root.UI.LastClosedFrame == Time.frameCount) return;
+        if (root.UI.IsOpen(FarmHubPanel.PanelId)) return;
         if (root.InputModes.CurrentMode == GameInputMode.Disabled || root.InputModes.CurrentMode == GameInputMode.Dialogue) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -139,6 +130,17 @@ public sealed class GameplayHudController : MonoBehaviour
             new Vector2(28f, -112f), new Vector2(290f, 68f), OpenSystemMenu, out TextMeshProUGUI menuLabel);
         menuButtonLabel = menuLabel;
 
+        RectTransform energyCard = CozyUi.Rect(hudLayer, "EnergyCard", Vector2.up, Vector2.up, Vector2.up,
+            new Vector2(28f, -196f), new Vector2(290f, 82f));
+        CozyUi.Panel(energyCard, CozyUi.Cream);
+        energyText = CozyUi.Text(energyCard, "Energy", "", 25f, TextAlignmentOptions.Center, CozyUi.Ink,
+            Vector2.zero, Vector2.one, Vector2.one * 0.5f, Vector2.zero, new Vector2(-16f, -8f));
+        RectTransform hintCard = CozyUi.Rect(hudLayer, "InteractionHint", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            new Vector2(0.5f, 0f), new Vector2(0, 146f), new Vector2(940f, 54f));
+        CozyUi.Panel(hintCard, new Color(0.15f, 0.21f, 0.13f, 0.9f), false).raycastTarget = false;
+        interactionText = CozyUi.Text(hintCard, "Hint", "", 22f, TextAlignmentOptions.Center, CozyUi.Cream,
+            Vector2.zero, Vector2.one, Vector2.one * 0.5f, Vector2.zero, new Vector2(-16, -4));
+
         RectTransform hotbar = CozyUi.Rect(hudLayer, "Hotbar", new Vector2(0.5f, 0f),
             new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 30f), new Vector2(1010f, 98f));
         CozyUi.Panel(hotbar, new Color32(86, 52, 34, 235));
@@ -169,6 +171,8 @@ public sealed class GameplayHudController : MonoBehaviour
             ? save.world.hour.ToString("00") + ":" + save.world.minute.ToString("00")
             : ((save.world.hour + 11) % 12 + 1) + ":" + save.world.minute.ToString("00") + (save.world.hour < 12 ? " AM" : " PM");
         moneyText.text = "GOLD   " + save.player.money.ToString("N0") + " g";
+        if (energyText != null) energyText.text = "ENERGY  " + save.farm.energy + "/100\nFarming Lv." + (farm != null ? farm.Game.Progression.Level : 1);
+        if (interactionText != null) interactionText.text = preferences != null && !preferences.showControlHints ? "" : farm != null ? farm.InteractionHint : "";
         for (int i = 0; i < hotbarLabels.Length; i++)
         {
             InventorySlotSaveData slot = save.inventory.slots[i];
@@ -188,33 +192,7 @@ public sealed class GameplayHudController : MonoBehaviour
     private void OpenBackpack()
     {
         if (!CanOpenModal()) return;
-        GameObject root = CozyUi.ModalRoot(windowLayer, "BackpackPanel");
-        RectTransform card = CozyUi.Rect(root.transform, "Card", new Vector2(0.5f, 0.5f),
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1080f, 720f));
-        CozyUi.Panel(card, CozyUi.Cream);
-        CozyUi.Text(card, "Title", "BACKPACK", 46f, TextAlignmentOptions.Center, CozyUi.Ink,
-            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, -32f), new Vector2(500f, 65f));
-        CozyUi.Text(card, "Money", save.player.money.ToString("N0") + " g", 29f,
-            TextAlignmentOptions.Right, CozyUi.Ink, Vector2.one, Vector2.one, Vector2.one,
-            new Vector2(-45f, -42f), new Vector2(220f, 50f));
-        CozyUi.Button(card, "Close", "X", Vector2.up, Vector2.up, Vector2.up,
-            new Vector2(38f, -38f), new Vector2(58f, 58f), CloseModal, out _);
-
-        for (int i = 0; i < InventorySaveData.SlotCount; i++)
-        {
-            int row = i / 6;
-            int column = i % 6;
-            InventorySlotSaveData slot = save.inventory.slots[i];
-            RectTransform cell = CozyUi.Rect(card, "InventorySlot" + (i + 1),
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                new Vector2(-405f + column * 162f, -155f - row * 126f), new Vector2(142f, 106f));
-            CozyUi.Panel(cell, slot.IsEmpty ? new Color32(224, 198, 148, 255) : new Color32(248, 223, 163, 255));
-            string label = slot.IsEmpty ? "Empty" : slot.displayName + (slot.count > 1 ? "\nx" + slot.count : string.Empty);
-            CozyUi.Text(cell, "Item", label, 21f, TextAlignmentOptions.Center, CozyUi.Ink,
-                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-12f, -10f));
-        }
-        SetModal(root);
+        GameRoot.Instance.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "backpack" });
     }
 
     private void OpenSystemMenu()
@@ -229,7 +207,7 @@ public sealed class GameplayHudController : MonoBehaviour
             new Vector2(0f, -38f), new Vector2(480f, 70f));
         AddMenuButton(card, "Resume", "RESUME", -145f, CloseModal);
         AddMenuButton(card, "Save", "SAVE GAME", -235f, SaveNow);
-        AddMenuButton(card, "Backpack", "BACKPACK", -325f, () => { ReplaceModal(null); OpenBackpack(); });
+        AddMenuButton(card, "Backpack", "BACKPACK", -325f, () => { CloseModal(); OpenBackpack(); });
         AddMenuButton(card, "Settings", "SETTINGS", -415f, OpenSettings);
         AddMenuButton(card, "TitleScreen", "SAVE & TITLE", -505f, () => ConfirmExit(false));
         AddMenuButton(card, "Quit", "SAVE & QUIT", -595f, () => ConfirmExit(true));
@@ -272,7 +250,8 @@ public sealed class GameplayHudController : MonoBehaviour
         SetModal(root);
     }
 
-    private bool CanOpenModal() => initialized && windowLayer != null && modal == null;
+    private bool CanOpenModal() => initialized && windowLayer != null && modal == null &&
+        !GameRoot.Instance.UI.IsOpen(SettingsPanel.PanelId) && !GameRoot.Instance.UI.IsOpen(FarmHubPanel.PanelId);
 
     private void SetModal(GameObject next)
     {
@@ -315,6 +294,7 @@ public sealed class GameplayHudController : MonoBehaviour
 
     private bool TrySaveNow()
     {
+        if (farm != null) return farm.SaveNow();
         GameRoot root = GameRoot.Instance;
         if (root == null || save == null) return false;
         if (player != null)
@@ -323,9 +303,6 @@ public sealed class GameplayHudController : MonoBehaviour
             save.player.positionY = player.position.y;
         }
         save.world.currentScene = SceneManager.GetActiveScene().name;
-        int wholeSeconds = Mathf.FloorToInt(unsavedPlaySeconds);
-        save.metadata.playTimeSeconds += wholeSeconds;
-        unsavedPlaySeconds -= wholeSeconds;
         bool saved = root.Saves.Save(root.Session.ActiveSlot, save);
         ShowToast(saved ? "Game saved." : "Save failed. Check the log.");
         return saved;
@@ -350,28 +327,36 @@ public sealed class GameplayHudController : MonoBehaviour
 
     private void ShowToast(string message)
     {
-        if (toastLayer != null) StartCoroutine(ToastRoutine(message));
+        if (toastLayer == null) return;
+        if (toastRoutine != null) StopCoroutine(toastRoutine);
+        if (activeToast != null) Destroy(activeToast);
+        toastRoutine = StartCoroutine(ToastRoutine(message));
     }
 
     private IEnumerator ToastRoutine(string message)
     {
         RectTransform panel = CozyUi.Rect(toastLayer, "Toast", new Vector2(0.5f, 0f),
-            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 150f), new Vector2(460f, 66f));
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 220f), new Vector2(880f, 96f));
+        activeToast = panel.gameObject;
         CozyUi.Panel(panel, new Color32(67, 91, 59, 245));
         CozyUi.Text(panel, "Text", message, 26f, TextAlignmentOptions.Center, CozyUi.Cream,
             Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-20f, -8f));
         yield return new WaitForSecondsRealtime(2.2f);
         if (panel != null) Destroy(panel.gameObject);
+        activeToast = null;
+        toastRoutine = null;
     }
 
-    private void OnApplicationPause(bool paused)
+    private void OnFarmFeedback(FarmResult result)
     {
-        if (paused && initialized) SaveNow();
+        if (GameRoot.Instance != null && GameRoot.Instance.UI.IsOpen(FarmHubPanel.PanelId)) return;
+        ShowToast(result.Message);
     }
 
     private void OnDestroy()
     {
         if (settings != null) settings.Changed -= ApplyPreferences;
+        if (farm != null && farm.Game != null) farm.Game.Feedback -= OnFarmFeedback;
         if (GameRoot.Instance != null) GameRoot.Instance.Pause.SetPaused(this, false);
     }
 

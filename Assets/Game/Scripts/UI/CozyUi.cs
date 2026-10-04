@@ -86,4 +86,34 @@ public static class CozyUi
         dim.color = ModalDim;
         return root.gameObject;
     }
+
+    /// <summary>Keep keyboard/controller selection inside the active modal.</summary>
+    public static void TrapNavigation(Transform root)
+    {
+        Selectable[] controls = root.GetComponentsInChildren<Selectable>();
+        Canvas.ForceUpdateCanvases();
+        foreach (Selectable source in controls)
+        {
+            var navigation = new Navigation { mode = Navigation.Mode.Explicit };
+            Vector2[] directions = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
+            Selectable[] neighbors = new Selectable[4];
+            Vector3 origin = source.transform.TransformPoint(((RectTransform)source.transform).rect.center);
+            for (int i = 0; i < 4; i++)
+            {
+                float best = 0;
+                foreach (Selectable candidate in controls)
+                {
+                    if (candidate == source || !candidate.IsInteractable()) continue;
+                    Vector2 offset = candidate.transform.TransformPoint(((RectTransform)candidate.transform).rect.center) - origin;
+                    float dot = Vector2.Dot(directions[i], offset);
+                    if (dot <= 0.01f) continue;
+                    float score = dot / offset.sqrMagnitude;
+                    if (score > best) { best = score; neighbors[i] = candidate; }
+                }
+            }
+            navigation.selectOnUp = neighbors[0]; navigation.selectOnDown = neighbors[1];
+            navigation.selectOnLeft = neighbors[2]; navigation.selectOnRight = neighbors[3];
+            source.navigation = navigation;
+        }
+    }
 }

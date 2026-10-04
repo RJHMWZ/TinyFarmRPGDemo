@@ -49,6 +49,17 @@ Keep title UI, save selection, and character creation outside gameplay scenes. F
 
 Feature rules belong to feature services and models, not to `UIService`.
 
+## Farm gameplay layer
+
+`GameplayEntryPoint` attaches a scene-owned `FarmRuntime`, which creates one `FarmGame`
+for the loaded session. `InventoryService`, `FarmingService`, `FarmEconomyService`, and
+`FarmProgressionService` implement rules independently of scene/input/UI objects.
+`FarmContent` is the authored definition catalog; `GameSaveData.farm` is the persisted state.
+`FarmWorldView` and `FarmInteraction` adapt the world and input. `FarmHubPanel` is a cached,
+serialized prefab registered with `UIService`. The HUD only presents time; `FarmRuntime`
+owns clock ticks and checkpoint capture. See [FarmGameplay.md](FarmGameplay.md) for the
+complete feature contract, controls, content workflow, migration rules, and remaining scope.
+
 Runtime systems must use one state owner. Save access goes through `GameRoot.Saves`, selected-slot
 state through `GameSession`, input ownership through `InputModeService`, and pause ownership through
 `PauseService`. Do not add static compatibility facades or write directly to `Time.timeScale`.

@@ -3,7 +3,7 @@ using System;
 [Serializable]
 public sealed class GameSaveData
 {
-    public int version = 3;
+    public int version = 4;
     public SaveMetadata metadata = new SaveMetadata();
     public PlayerSaveData player = new PlayerSaveData();
     public WorldSaveData world = new WorldSaveData();
@@ -11,6 +11,7 @@ public sealed class GameSaveData
     public RelationshipSaveData relationships = new RelationshipSaveData();
     public UnlockSaveData unlocks = new UnlockSaveData();
     public InventorySaveData inventory = InventorySaveData.CreateStarterInventory();
+    public FarmSaveData farm = new FarmSaveData();
 
     public static GameSaveData CreateNew(CharacterCreationProfile appearance)
     {
@@ -32,6 +33,9 @@ public sealed class GameSaveData
         if (unlocks == null) unlocks = new UnlockSaveData();
         if (inventory == null) inventory = InventorySaveData.CreateStarterInventory();
         inventory.Normalize();
+        if (farm == null) farm = new FarmSaveData();
+        farm.Normalize();
+        player.money = Math.Max(0, player.money);
         if (quests.activeQuestIds == null) quests.activeQuestIds = Array.Empty<string>();
         if (quests.completedQuestIds == null) quests.completedQuestIds = Array.Empty<string>();
         if (relationships.npcIds == null) relationships.npcIds = Array.Empty<string>();
@@ -41,7 +45,8 @@ public sealed class GameSaveData
         if (unlocks.unlockedIds == null) unlocks.unlockedIds = Array.Empty<string>();
         if (string.IsNullOrWhiteSpace(world.currentScene)) world.currentScene = GameSceneNames.Gameplay;
         world.year = Math.Max(1, world.year);
-        world.day = Math.Max(1, world.day);
+        world.day = Math.Max(1, Math.Min(GameCalendar.DaysPerSeason, world.day));
+        world.season = Math.Max(0, Math.Min(3, world.season));
         world.hour = Math.Max(0, Math.Min(23, world.hour));
         world.minute = Math.Max(0, Math.Min(59, world.minute));
         if (string.IsNullOrWhiteSpace(metadata.playerName)) metadata.playerName = player.appearance.playerName;
@@ -72,7 +77,10 @@ public sealed class InventorySaveData
         if (slots == null) slots = new InventorySlotSaveData[SlotCount];
         if (slots.Length != SlotCount) Array.Resize(ref slots, SlotCount);
         for (int i = 0; i < slots.Length; i++)
+        {
             if (slots[i] == null) slots[i] = new InventorySlotSaveData();
+            if (slots[i].IsEmpty) slots[i].Set(null, null, 0);
+        }
         selectedHotbarSlot = Math.Max(0, Math.Min(11, selectedHotbarSlot));
     }
 }

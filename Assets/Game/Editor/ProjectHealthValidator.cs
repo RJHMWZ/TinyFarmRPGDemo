@@ -47,6 +47,8 @@ public static class ProjectHealthValidator
         ValidateUiCatalog(errors);
         ValidateFrontendViews(errors);
         ValidatePrefabs(errors);
+        try { FarmContentBuilder.ValidateOrThrow(); }
+        catch (System.Exception exception) { errors.Add("Farm content: " + exception.Message); }
 
         if (errors.Count > 0)
             throw new BuildFailedException("Project validation failed:\n- " + string.Join("\n- ", errors));

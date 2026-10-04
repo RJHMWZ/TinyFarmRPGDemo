@@ -42,6 +42,10 @@ public sealed class GameplayEntryPoint : MonoBehaviour
             save.player.positionY,
             playerAppearance.transform.position.z);
 
+        FarmRuntime farm = GetComponent<FarmRuntime>();
+        if (farm == null) farm = gameObject.AddComponent<FarmRuntime>();
+        farm.Initialize(playerAppearance.transform);
+
         GameplayHudController hud = GetComponent<GameplayHudController>();
         if (hud == null) hud = gameObject.AddComponent<GameplayHudController>();
         hud.Initialize(playerAppearance.transform);

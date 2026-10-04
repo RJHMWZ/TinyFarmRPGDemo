@@ -29,7 +29,7 @@ public sealed class SaveService
         public CharacterCreationProfile profile = null;
     }
 
-    private const int CurrentSaveVersion = 3;
+    private const int CurrentSaveVersion = 4;
     private const string SaveFolderName = "Saves";
     private const string SaveFilePattern = "save-slot-{0}.json";
     private const string LegacyFilePattern = "character-profile-slot-{0}.json";
@@ -190,7 +190,14 @@ public sealed class SaveService
 
     private static GameSaveData Migrate(GameSaveData data, int sourceVersion)
     {
-        // Add sequential schema migrations here as saveVersion increases.
+        // v2 introduced the gameplay envelope; v3 added inventory; v4 adds farm systems.
+        if (sourceVersion < 3 && data.inventory == null) data.inventory = InventorySaveData.CreateStarterInventory();
+        if (sourceVersion < 4)
+        {
+            data.farm = new FarmSaveData();
+            data.farm.Normalize();
+        }
+        data.Normalize();
         data.version = CurrentSaveVersion;
         return data;
     }
