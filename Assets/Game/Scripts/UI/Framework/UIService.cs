@@ -11,6 +11,9 @@ public sealed class UIService : MonoBehaviour
     private GameInputMode inputModeBeforeUi;
     private bool ownsInputMode;
 
+    public bool IsOpen(string id) => stack.Contains(id);
+    public int LastClosedFrame { get; private set; } = -1;
+
     private void OnEnable()
     {
         UIRoot.ActiveChanged += OnRootChanged;
@@ -73,6 +76,7 @@ public sealed class UIService : MonoBehaviour
         UIPanelCatalog.Entry definition = catalog != null ? catalog.Find(id) : null;
         if (definition == null) return;
         if (!stack.Remove(id)) return;
+        LastClosedFrame = Time.frameCount;
         if (instances.TryGetValue(id, out UIPanel panel) && panel != null)
         {
             panel.OnClose();

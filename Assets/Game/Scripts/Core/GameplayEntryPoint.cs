@@ -41,5 +41,9 @@ public sealed class GameplayEntryPoint : MonoBehaviour
             save.player.positionX,
             save.player.positionY,
             playerAppearance.transform.position.z);
+
+        GameplayHudController hud = GetComponent<GameplayHudController>();
+        if (hud == null) hud = gameObject.AddComponent<GameplayHudController>();
+        hud.Initialize(playerAppearance.transform);
     }
 }

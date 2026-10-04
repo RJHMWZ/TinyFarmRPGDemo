@@ -39,9 +39,9 @@ public sealed class MainMenuController : MonoBehaviour
         Bind(menuView.CreateGameButton, CreateNewGame);
         Bind(menuView.LoadGameButton, OpenSavePanel);
         Bind(menuView.ExitButton, ExitGame);
-        // Settings remain visible in the authored layout but are intentionally unavailable until
-        // the settings service and localization milestone are implemented.
-        menuView.SettingsButton.interactable = false;
+        MainMenuPresentation presentation = GetComponent<MainMenuPresentation>();
+        if (presentation == null) presentation = gameObject.AddComponent<MainMenuPresentation>();
+        presentation.Initialize(menuView);
         BindSavePanel();
         bindingsRegistered = true;
 

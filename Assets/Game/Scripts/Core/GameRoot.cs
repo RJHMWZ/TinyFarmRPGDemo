@@ -13,6 +13,7 @@ public sealed class GameRoot : MonoBehaviour
     public PauseService Pause { get; private set; }
     public UIService UI { get; private set; }
     public GameFlowController Flow { get; private set; }
+    public SettingsService Settings { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStaticState() => Instance = null;
@@ -33,6 +34,7 @@ public sealed class GameRoot : MonoBehaviour
         Transitions = GetOrAdd<TransitionService>();
         InputModes = GetOrAdd<InputModeService>();
         Pause = GetOrAdd<PauseService>();
+        Settings = GetOrAdd<SettingsService>();
         UI = GetOrAdd<UIService>();
         Flow = GetOrAdd<GameFlowController>();
     }
@@ -54,6 +56,9 @@ public static class GameRootBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureRoot()
     {
-        if (GameRoot.Instance == null) new GameObject("GameRoot").AddComponent<GameRoot>();
+        if (GameRoot.Instance != null) return;
+        GameBootstrapConfig config = Resources.Load<GameBootstrapConfig>("GameBootstrap");
+        if (config != null && config.RootPrefab != null) Object.Instantiate(config.RootPrefab);
+        else new GameObject("GameRoot").AddComponent<GameRoot>();
     }
 }

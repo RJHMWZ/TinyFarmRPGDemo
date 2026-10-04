@@ -29,7 +29,7 @@ public sealed class SaveService
         public CharacterCreationProfile profile = null;
     }
 
-    private const int CurrentSaveVersion = 2;
+    private const int CurrentSaveVersion = 3;
     private const string SaveFolderName = "Saves";
     private const string SaveFilePattern = "save-slot-{0}.json";
     private const string LegacyFilePattern = "character-profile-slot-{0}.json";

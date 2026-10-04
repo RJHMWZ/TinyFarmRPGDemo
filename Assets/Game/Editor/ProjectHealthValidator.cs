@@ -150,6 +150,7 @@ public static class ProjectHealthValidator
         RequireComponent<PauseService>(prefab, errors);
         RequireComponent<UIService>(prefab, errors);
         RequireComponent<GameFlowController>(prefab, errors);
+        RequireComponent<SettingsService>(prefab, errors);
     }
 
     private static void RequireComponent<T>(GameObject prefab, List<string> errors) where T : Component
@@ -215,6 +216,8 @@ public static class ProjectHealthValidator
         }
 
         var ids = new HashSet<string>();
+        if (catalog.Find(SettingsPanel.PanelId) == null)
+            errors.Add("UIPanelCatalog must register the shared settings panel.");
         for (int i = 0; i < catalog.Entries.Count; i++)
         {
             UIPanelCatalog.Entry entry = catalog.Entries[i];

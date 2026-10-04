@@ -20,6 +20,8 @@ public sealed class PlayerMovement : MonoBehaviour
     private float moveSpeed = 3f;
 
     private Rigidbody2D rb;
+    private SettingsService settings;
+    private InputAction runtimeMoveAction;
     private Vector2 moveInput;   // 当前帧输入
 
     /// <summary>供动画控制器读取当前移动方向。</summary>
@@ -56,14 +58,41 @@ public sealed class PlayerMovement : MonoBehaviour
     private void OnEnable()
     {
         // 新输入系统的 Action 必须启用后才会读取设备输入。
-        moveAction.action.Enable();
+        if (moveAction == null || moveAction.action == null) return;
+        runtimeMoveAction = moveAction.action.Clone();
+        runtimeMoveAction.Enable();
+        ApplyBindings();
+    }
+
+    private void Start()
+    {
+        settings = GameRoot.Instance != null ? GameRoot.Instance.Settings : null;
+        if (settings == null) return;
+        settings.Changed += ApplyBindings;
+        ApplyBindings();
+    }
+
+    private void ApplyBindings()
+    {
+        if (runtimeMoveAction == null || settings == null) return;
+        GameSettings data = settings.Snapshot;
+        int[] keys = { data.moveUp, data.moveDown, data.moveLeft, data.moveRight };
+        string[] names = { "up", "down", "left", "right" };
+        // Override the authored WASD composite only; keep arrow-key bindings as a fallback.
+        for (int i = 0; i < runtimeMoveAction.bindings.Count; i++)
+        {
+            InputBinding binding = runtimeMoveAction.bindings[i];
+            if (!binding.isPartOfComposite || binding.path.Contains("Arrow")) continue;
+            int index = System.Array.IndexOf(names, binding.name);
+            if (index >= 0) runtimeMoveAction.ApplyBindingOverride(i, "<Keyboard>/" + ((Key)keys[index]).ToString().ToLowerInvariant());
+        }
     }
 
     private void OnDisable()
     {
         // 组件停用时同步停用 Action，防止无效监听或重复启用。
         moveInput = Vector2.zero;
-        if (moveAction != null && moveAction.action != null) moveAction.action.Disable();
+        if (runtimeMoveAction != null) { runtimeMoveAction.Dispose(); runtimeMoveAction = null; }
     }
 
     private void Update()
@@ -77,7 +106,7 @@ public sealed class PlayerMovement : MonoBehaviour
 
         // Move 是 Value/Vector2 类型。WASD 或方向键的 2D Vector Composite
         // 会被 Input System 合成为一个 Vector2，而不是分别读取四个按键。
-        moveInput = moveAction.action.ReadValue<Vector2>();
+        moveInput = runtimeMoveAction != null ? runtimeMoveAction.ReadValue<Vector2>() : Vector2.zero;
 
         // 同时按两个方向时向量长度约为 1.414；归一化后可防止斜向速度更快。
         if (moveInput.sqrMagnitude > 1f)
@@ -91,5 +120,10 @@ public sealed class PlayerMovement : MonoBehaviour
         if (moveInput.sqrMagnitude <= 0f) return;
         Vector2 targetPosition = rb.position + moveInput * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(targetPosition);
+    }
+
+    private void OnDestroy()
+    {
+        if (settings != null) settings.Changed -= ApplyBindings;
     }
 }
