@@ -239,6 +239,11 @@ public static class ProjectHealthValidator
         MainMenuView menuView = menuPrefab != null ? menuPrefab.GetComponent<MainMenuView>() : null;
         if (menuView == null || !menuView.IsConfigured)
             errors.Add("MainMenuView is missing or incomplete: " + MainMenuViewPath);
+        else if (menuPrefab.transform.Find("MainMenuBackdrop") == null ||
+                 menuPrefab.transform.Find("MenuShade") == null ||
+                 menuPrefab.transform.Find("TitlePlate") == null ||
+                 menuPrefab.transform.Find("Version") == null)
+            errors.Add("MainMenu presentation is incomplete. Edit the MainMenuScreen prefab directly.");
 
         GameObject savePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SaveSelectViewPath);
         SaveSelectView saveView = savePrefab != null ? savePrefab.GetComponent<SaveSelectView>() : null;
@@ -251,6 +256,11 @@ public static class ProjectHealthValidator
             : null;
         if (characterView == null || !characterView.IsConfigured)
             errors.Add("CharacterCreationView is missing or incomplete: " + CharacterCreationViewPath);
+        else if (characterView.GetPreviewLayer(PlayerAppearanceCategory.Skin) == null ||
+                 characterView.GetPreviewLayer(PlayerAppearanceCategory.Clothes) == null ||
+                 characterView.GetPreviewLayer(PlayerAppearanceCategory.Eyes) == null ||
+                 characterView.GetPreviewLayer(PlayerAppearanceCategory.Hair) == null)
+            errors.Add("Character preview layers are incomplete. Edit the CharacterCreationScreen prefab directly.");
     }
 
     private static void ValidatePrefabs(List<string> errors)

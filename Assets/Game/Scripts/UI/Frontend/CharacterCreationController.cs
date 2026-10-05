@@ -256,26 +256,20 @@ public sealed class CharacterCreationController : MonoBehaviour
 
     private void UpdatePreview(PlayerAppearanceCategory category, PlayerPartAnimationSet set)
     {
-        Image previewTemplate = view.PreviewTemplate;
         if (!previews.TryGetValue(category, out Image image))
         {
-            GameObject layer = new GameObject("Preview_" + category, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            RectTransform rect = (RectTransform)layer.transform;
-            rect.SetParent(previewTemplate.transform, false);
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            rect.SetSiblingIndex((int)category);
-            image = layer.GetComponent<Image>();
-            image.preserveAspect = true;
-            image.raycastTarget = false;
+            image = view.GetPreviewLayer(category);
+            if (image == null)
+            {
+                Debug.LogError("Character preview layer is not authored for " + category + ".", view);
+                return;
+            }
             previews.Add(category, image);
         }
 
         image.sprite = set != null ? set.GetSprite(PlayerAnimationType.Idle, PlayerDirection.Down, 0) : null;
         image.enabled = image.sprite != null;
-        previewTemplate.enabled = false;
+        view.PreviewTemplate.enabled = false;
     }
 
     private static int FindIndex(List<CharacterAppearanceDatabase.Entry> options, string id)

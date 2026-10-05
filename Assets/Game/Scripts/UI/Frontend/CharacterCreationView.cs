@@ -35,6 +35,7 @@ public sealed class CharacterCreationView : MonoBehaviour
 
     [Header("Appearance")]
     [SerializeField] private Image previewTemplate;
+    [SerializeField] private Image[] previewLayers;
     [SerializeField] private AppearanceRow[] appearanceRows;
 
     [Header("Navigation")]
@@ -48,6 +49,13 @@ public sealed class CharacterCreationView : MonoBehaviour
     public Button MaleButton => maleButton;
     public Button FemaleButton => femaleButton;
     public Image PreviewTemplate => previewTemplate;
+    public Image GetPreviewLayer(PlayerAppearanceCategory category)
+    {
+        int index = (int)category;
+        return previewLayers != null && index >= 0 && index < previewLayers.Length
+            ? previewLayers[index]
+            : null;
+    }
     public IReadOnlyList<AppearanceRow> AppearanceRows => appearanceRows;
     public Button StartGameButton => startGameButton;
     public Button ReturnButton => returnButton;
@@ -58,9 +66,13 @@ public sealed class CharacterCreationView : MonoBehaviour
         {
             if (nameInput == null || randomNameButton == null || maleBackground == null ||
                 femaleBackground == null || maleButton == null || femaleButton == null ||
-                previewTemplate == null || startGameButton == null || returnButton == null ||
+                previewTemplate == null || previewLayers == null || previewLayers.Length < 4 ||
+                startGameButton == null || returnButton == null ||
                 appearanceRows == null)
                 return false;
+
+            for (int i = 0; i < 4; i++)
+                if (previewLayers[i] == null) return false;
 
             var categories = new HashSet<PlayerAppearanceCategory>();
             for (int i = 0; i < appearanceRows.Length; i++)
