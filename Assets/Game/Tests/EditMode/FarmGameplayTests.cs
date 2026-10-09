@@ -222,6 +222,42 @@ public sealed class FarmGameplayTests
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
+    [Test] public void FirstDayTutorial_GuidesActionsFastGrowsThreeCropsAndRewardsOnce()
+    {
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.SelectHoe));
+
+        game.SelectHotbarSlot(0);
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.TillSoil));
+        for (int i = 0; i < 3; i++) Assert.That(game.Execute(() => game.Farming.UsePlot(i, 0)).Success, Is.True);
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.PlantSeeds));
+        for (int i = 0; i < 3; i++) Assert.That(game.Execute(() => game.Farming.UsePlot(i, 4)).Success, Is.True);
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.WaterCrops));
+        for (int i = 0; i < 3; i++) Assert.That(game.Execute(() => game.Farming.UsePlot(i, 1)).Success, Is.True);
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.Sleep));
+
+        game.Sleep();
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.Harvest));
+        Assert.That(game.Save.farm.tutorialFastGrowthUsed, Is.True);
+        Assert.That(game.Save.farm.plots.Take(3).All(game.Farming.IsReady), Is.True);
+
+        Assert.That(game.Execute(() => game.Farming.UsePlot(0, 0)).Success, Is.True);
+        Assert.That(game.Tutorial.Step, Is.EqualTo(FirstDayTutorialStep.Ship));
+        int cropSlot = Array.FindIndex(game.Save.inventory.slots, x => x.itemId == "parsnip");
+        Assert.That(game.Execute(() => game.Economy.Ship(cropSlot, 1)).Success, Is.True);
+        Assert.That(game.Tutorial.IsComplete, Is.True);
+        Assert.That(game.Save.farm.tutorialRewardClaimed, Is.True);
+        Assert.That(game.Save.player.money, Is.EqualTo(500 + FirstDayTutorial.RewardGold));
+        Assert.That(game.Save.farm.experience, Is.EqualTo(20 + FirstDayTutorial.RewardExperience));
+
+        game.Tutorial.Refresh();
+        Assert.That(game.Save.player.money, Is.EqualTo(500 + FirstDayTutorial.RewardGold), "Tutorial reward must be idempotent.");
+
+        Assert.That(game.Execute(() => game.Farming.UsePlot(3, 0)).Success, Is.True);
+        Assert.That(game.Execute(() => game.Farming.UsePlot(3, 4)).Success, Is.True);
+        Assert.That(game.Execute(() => game.Farming.UsePlot(3, 1)).Success, Is.True);
+        game.Sleep();
+        Assert.That(game.Save.farm.plots[3].growth, Is.EqualTo(1), "Only the tutorial night may accelerate crop growth.");
+    }
     [Test] public void VersionThreeSave_MigratesWithoutChangingInventoryMoneyOrIdentity()
     {
         string directory = Path.Combine(Path.GetTempPath(), "TinyFarmMigration", Guid.NewGuid().ToString("N"));

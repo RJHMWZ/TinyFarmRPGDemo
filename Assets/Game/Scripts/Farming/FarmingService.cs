@@ -76,6 +76,8 @@ public sealed class FarmingService
     }
     public void EndDay(int nextSeason, bool nextDayRain)
     {
+        bool tutorialGrowth = save.farm.tutorialStep == (int)FirstDayTutorialStep.Sleep && !save.farm.tutorialFastGrowthUsed;
+        int acceleratedCrops = 0;
         for (int i = 0; i < save.farm.plots.Length; i++)
         {
             var plot = save.farm.plots[i];
@@ -83,7 +85,15 @@ public sealed class FarmingService
             if (crop != null)
             {
                 if (!crop.InSeason(nextSeason)) { plot.seedId = null; plot.growth = 0; plot.fertilized = false; }
-                else if (plot.watered) plot.growth = Math.Min(crop.growthDays, plot.growth + 1);
+                else if (plot.watered)
+                {
+                    if (tutorialGrowth && acceleratedCrops < 3)
+                    {
+                        plot.growth = crop.growthDays;
+                        acceleratedCrops++;
+                    }
+                    else plot.growth = Math.Min(crop.growthDays, plot.growth + 1);
+                }
             }
             bool irrigated = plot.sprinkler;
             int x = i % FarmSaveData.Width, y = i / FarmSaveData.Width;
@@ -93,6 +103,7 @@ public sealed class FarmingService
             if (y < FarmSaveData.Height - 1) irrigated |= save.farm.plots[i + FarmSaveData.Width].sprinkler;
             plot.watered = plot.tilled && (nextDayRain || irrigated);
         }
+        if (acceleratedCrops > 0) save.farm.tutorialFastGrowthUsed = true;
     }
     public bool NodeAvailable(string id) => (save.farm.resources.Find(x => x.id == id)?.availableDay ?? 0) <= save.farm.daysPlayed;
     public FarmResult Gather(string nodeId, string kind, int slotIndex)

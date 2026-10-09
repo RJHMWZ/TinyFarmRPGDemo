@@ -19,6 +19,10 @@ public sealed class FarmSaveData
     public int daysPlayed;
     public float clockSeconds;
     public double playSeconds;
+    public int tutorialStep;
+    public bool tutorialHoeSelected;
+    public bool tutorialFastGrowthUsed;
+    public bool tutorialRewardClaimed;
     public void Normalize()
     {
         if (plots == null) plots = new FarmPlotData[Width * Height];
@@ -41,6 +45,8 @@ public sealed class FarmSaveData
         energy = Math.Max(0, Math.Min(100, energy));
         experience = Math.Max(0, Math.Min(1000000, experience));
         daysPlayed = Math.Max(0, daysPlayed);
+        tutorialStep = Math.Max(0, Math.Min((int)FirstDayTutorialStep.Complete, tutorialStep));
+        if (tutorialRewardClaimed) tutorialStep = (int)FirstDayTutorialStep.Complete;
         if (float.IsNaN(clockSeconds) || float.IsInfinity(clockSeconds) || clockSeconds < 0) clockSeconds = 0;
         if (double.IsNaN(playSeconds) || double.IsInfinity(playSeconds) || playSeconds < 0) playSeconds = 0;
     }

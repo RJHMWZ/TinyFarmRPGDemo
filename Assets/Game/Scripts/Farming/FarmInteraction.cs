@@ -20,17 +20,17 @@ public sealed class FarmInteraction : MonoBehaviour
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
         int selected = runtime.Game.Save.inventory.selectedHotbarSlot;
+        bool selectionInput = false;
         if (keyboard != null)
         {
             Key[] keys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9, Key.Digit0, Key.Minus, Key.Equals };
-            for (int i = 0; i < keys.Length; i++) if (keyboard[keys[i]].wasPressedThisFrame) selected = i;
+            for (int i = 0; i < keys.Length; i++) if (keyboard[keys[i]].wasPressedThisFrame) { selected = i; selectionInput = true; }
             if (keyboard.tabKey.wasPressedThisFrame) { root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "journal" }); return; }
         }
         bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         if (mouse != null && !overUi && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.1f)
-            selected = (selected + (mouse.scroll.ReadValue().y > 0 ? 11 : 1)) % 12;
-        if (selected != runtime.Game.Save.inventory.selectedHotbarSlot)
-        { runtime.Game.Save.inventory.selectedHotbarSlot = selected; runtime.Game.NotifyChanged(); }
+        { selected = (selected + (mouse.scroll.ReadValue().y > 0 ? 11 : 1)) % 12; selectionInput = true; }
+        if (selectionInput) runtime.Game.SelectHotbarSlot(selected);
         FarmWorldTarget target = FindTarget((Vector2)transform.position + facing * 0.85f, false);
         if (mouse != null && !overUi && Camera.main != null)
         {

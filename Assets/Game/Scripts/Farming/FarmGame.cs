@@ -10,6 +10,7 @@ public sealed class FarmGame
     public FarmingService Farming { get; }
     public FarmEconomyService Economy { get; }
     public FarmProgressionService Progression { get; }
+    public FirstDayTutorial Tutorial { get; }
     public event Action Changed;
     public event Action<FarmResult> Feedback;
     public event Action DayEnded;
@@ -23,15 +24,26 @@ public sealed class FarmGame
         Progression = new FarmProgressionService(save, content);
         Economy = new FarmEconomyService(save, content, Inventory, Progression);
         Farming = new FarmingService(save, content, Inventory, Progression);
+        Tutorial = new FirstDayTutorial(save, Progression);
     }
     public FarmResult Execute(Func<FarmResult> command)
     {
         FarmResult result = command();
+        string tutorialMessage = result.Success ? Tutorial.Refresh() : null;
         if (result.Success) Changed?.Invoke();
         Feedback?.Invoke(result);
+        if (!string.IsNullOrEmpty(tutorialMessage)) Feedback?.Invoke(FarmResult.Ok(tutorialMessage));
         return result;
     }
     public void NotifyChanged() => Changed?.Invoke();
+    public void SelectHotbarSlot(int index)
+    {
+        if (index < 0 || index >= Math.Min(12, Save.inventory.slots.Length)) return;
+        Save.inventory.selectedHotbarSlot = index;
+        string tutorialMessage = Tutorial.SelectHotbarItem(Save.inventory.slots[index].itemId);
+        Changed?.Invoke();
+        if (!string.IsNullOrEmpty(tutorialMessage)) Feedback?.Invoke(FarmResult.Ok(tutorialMessage));
+    }
     public void Tick(float seconds)
     {
         if (seconds <= 0 || float.IsNaN(seconds) || float.IsInfinity(seconds)) return;
@@ -60,14 +72,20 @@ public sealed class FarmGame
         // Deterministic weather is stable across saving/loading and reproducible in tests.
         bool rain = Save.world.season != 3 && (Save.farm.daysPlayed * 17 + 3) % 7 < 2;
         Save.world.weatherId = rain ? "rainy" : "sunny";
+        bool tutorialGrowthWasUsed = Save.farm.tutorialFastGrowthUsed;
         Farming.EndDay(Save.world.season, rain);
+        bool tutorialHarvestReady = !tutorialGrowthWasUsed && Save.farm.tutorialFastGrowthUsed;
         int income = Economy.SettleShipping();
         Save.farm.energy = 100;
         Save.farm.clockSeconds = 0;
         Progression.Record("sleep");
+        string tutorialMessage = Tutorial.Refresh();
         Changed?.Invoke();
-        FarmResult result = FarmResult.Ok("Good morning! Shipping income: " + income + "g. " + (rain ? "Rain waters the fields today." : "Remember to water your crops."));
+        string morningHint = tutorialHarvestReady ? "Your first crops are ready to harvest!" :
+            rain ? "Rain waters the fields today." : "Remember to water your crops.";
+        FarmResult result = FarmResult.Ok("Good morning! Shipping income: " + income + "g. " + morningHint);
         Feedback?.Invoke(result);
+        if (!string.IsNullOrEmpty(tutorialMessage)) Feedback?.Invoke(FarmResult.Ok(tutorialMessage));
         DayEnded?.Invoke();
         return result;
     }

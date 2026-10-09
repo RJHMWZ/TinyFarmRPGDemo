@@ -131,9 +131,12 @@ public sealed class FarmHubPanel : UIPanel
                 ActionButton("EQUIP", () =>
                 {
                     if (selection < 0) return;
-                    if (selection >= 12) game.Inventory.Move(selection, game.Save.inventory.selectedHotbarSlot);
-                    else game.Save.inventory.selectedHotbarSlot = selection;
-                    game.NotifyChanged();
+                    if (selection >= 12)
+                    {
+                        int hotbar = game.Save.inventory.selectedHotbarSlot;
+                        if (game.Inventory.Move(selection, hotbar)) game.SelectHotbarSlot(hotbar);
+                    }
+                    else game.SelectHotbarSlot(selection);
                 });
                 break;
             case "shop":

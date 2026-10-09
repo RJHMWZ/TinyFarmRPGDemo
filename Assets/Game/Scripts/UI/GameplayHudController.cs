@@ -26,6 +26,10 @@ public sealed class GameplayHudController : MonoBehaviour
     private float hudRefreshTimer;
     private TMP_Text energyText;
     private TMP_Text interactionText;
+    private GameObject tutorialCard;
+    private TMP_Text tutorialHeader;
+    private TMP_Text tutorialTitle;
+    private TMP_Text tutorialInstruction;
     private FarmRuntime farm;
     private bool initialized;
     private SettingsService settings;
@@ -135,6 +139,17 @@ public sealed class GameplayHudController : MonoBehaviour
         CozyUi.Panel(energyCard, CozyUi.Cream);
         energyText = CozyUi.Text(energyCard, "Energy", "", 25f, TextAlignmentOptions.Center, CozyUi.Ink,
             Vector2.zero, Vector2.one, Vector2.one * 0.5f, Vector2.zero, new Vector2(-16f, -8f));
+
+        RectTransform objectiveCard = CozyUi.Rect(hudLayer, "FirstDayObjective", Vector2.up, Vector2.up, Vector2.up,
+            new Vector2(28f, -298f), new Vector2(490f, 176f));
+        tutorialCard = objectiveCard.gameObject;
+        CozyUi.Panel(objectiveCard, new Color(0.96f, 0.91f, 0.72f, 0.96f));
+        tutorialHeader = CozyUi.Text(objectiveCard, "Step", "", 18f, TextAlignmentOptions.Left, CozyUi.Leaf,
+            Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -14f), new Vector2(-44f, 30f));
+        tutorialTitle = CozyUi.Text(objectiveCard, "Objective", "", 27f, TextAlignmentOptions.Left, CozyUi.Ink,
+            Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -47f), new Vector2(-44f, 42f));
+        tutorialInstruction = CozyUi.Text(objectiveCard, "Instruction", "", 20f, TextAlignmentOptions.TopLeft, CozyUi.Ink,
+            Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -91f), new Vector2(-44f, 68f));
         RectTransform hintCard = CozyUi.Rect(hudLayer, "InteractionHint", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
             new Vector2(0.5f, 0f), new Vector2(0, 146f), new Vector2(940f, 54f));
         CozyUi.Panel(hintCard, new Color(0.15f, 0.21f, 0.13f, 0.9f), false).raycastTarget = false;
@@ -173,6 +188,19 @@ public sealed class GameplayHudController : MonoBehaviour
         moneyText.text = "GOLD   " + save.player.money.ToString("N0") + " g";
         if (energyText != null) energyText.text = "ENERGY  " + save.farm.energy + "/100\nFarming Lv." + (farm != null ? farm.Game.Progression.Level : 1);
         if (interactionText != null) interactionText.text = preferences != null && !preferences.showControlHints ? "" : farm != null ? farm.InteractionHint : "";
+        if (tutorialCard != null && farm != null)
+        {
+            FirstDayTutorial tutorial = farm.Game.Tutorial;
+            tutorialCard.SetActive(!tutorial.IsComplete);
+            if (!tutorial.IsComplete)
+            {
+                TutorialObjective objective = tutorial.Objective;
+                tutorialHeader.text = "FIRST DAY  " + tutorial.DisplayStep + "/" + FirstDayTutorial.ObjectiveCount +
+                    "     " + Mathf.Min(objective.Progress, objective.Target) + "/" + objective.Target;
+                tutorialTitle.text = objective.Title;
+                tutorialInstruction.text = objective.Instruction;
+            }
+        }
         for (int i = 0; i < hotbarLabels.Length; i++)
         {
             InventorySlotSaveData slot = save.inventory.slots[i];
@@ -185,7 +213,8 @@ public sealed class GameplayHudController : MonoBehaviour
 
     private void SelectHotbarSlot(int index)
     {
-        save.inventory.selectedHotbarSlot = Mathf.Clamp(index, 0, 11);
+        if (farm != null) farm.Game.SelectHotbarSlot(Mathf.Clamp(index, 0, 11));
+        else save.inventory.selectedHotbarSlot = Mathf.Clamp(index, 0, 11);
         RefreshHud();
     }
 

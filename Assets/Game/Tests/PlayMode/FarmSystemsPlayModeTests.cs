@@ -41,5 +41,6 @@ public sealed class FarmSystemsPlayModeTests
         Assert.That(GameObject.Find("ClockCard"), Is.Not.Null);
         Assert.That(GameObject.Find("Hotbar"), Is.Not.Null);
         Assert.That(GameObject.Find("BackpackButton"), Is.Not.Null);
+        Assert.That(GameObject.Find("FirstDayObjective"), Is.Not.Null);
     }
 }
