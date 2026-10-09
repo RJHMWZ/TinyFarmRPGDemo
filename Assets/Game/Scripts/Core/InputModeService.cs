@@ -25,5 +25,12 @@ public sealed class InputModeService : MonoBehaviour
         ModeChanged?.Invoke(mode);
     }
 
-    private void ApplyCursorState() => Cursor.visible = CurrentMode != GameInputMode.Gameplay;
+    private void ApplyCursorState()
+    {
+        // The farming loop is pointer-driven on desktop: the player aims at plots, stations and
+        // the hotbar while still moving with the keyboard. Hiding the cursor in Gameplay made the
+        // mouse appear broken even though pointer input was still being processed.
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
 }

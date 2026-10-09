@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -49,7 +50,13 @@ public sealed class FarmHubPanel : UIPanel
         for (int i = 0; i < tabs.Length; i++)
         { int index = i; tabs[i].onClick.AddListener(() => SelectPage(tabIds[index])); }
         for (int i = 0; i < slots.Length; i++)
-        { int index = i; slots[i].onClick.AddListener(() => SelectSlot(index)); }
+        {
+            int index = i;
+            slots[i].onClick.AddListener(() => SelectSlot(index));
+            FarmSlotPointerRelay relay = slots[i].GetComponent<FarmSlotPointerRelay>();
+            if (relay == null) relay = slots[i].gameObject.AddComponent<FarmSlotPointerRelay>();
+            relay.Bind(index, OnSlotPointerClick);
+        }
         for (int i = 0; i < rows.Length; i++)
         { int index = i; rows[i].onClick.AddListener(() => { int item = pageNumber * rows.Length + index; if (item < rowCommands.Count) rowCommands[item]?.Invoke(); }); }
         for (int i = 0; i < actions.Length; i++)
@@ -90,14 +97,84 @@ public sealed class FarmHubPanel : UIPanel
     private void SelectPage(string id) { page = id; selection = -1; moveFrom = -1; pageNumber = 0; withdrawing = false; Refresh(); }
     private void SelectSlot(int index)
     {
-        if (moveFrom >= 0 && page == "backpack")
+        if (page == "backpack")
         {
-            bool moved = game.Inventory.Move(moveFrom, index);
-            moveFrom = -1;
-            if (moved) game.NotifyChanged();
+            if (moveFrom >= 0)
+            {
+                if (moveFrom == index)
+                {
+                    moveFrom = -1;
+                    status.text = "Move cancelled.";
+                }
+                else
+                {
+                    int source = moveFrom;
+                    moveFrom = -1;
+                    bool moved = game.Inventory.Move(source, index);
+                    status.text = moved ? "Item placed." : "That item cannot be moved there.";
+                    if (moved) game.NotifyChanged();
+                }
+                selection = index;
+                Refresh();
+                return;
+            }
+
+            if (!game.Inventory.Data.slots[index].IsEmpty)
+            {
+                moveFrom = index;
+                selection = index;
+                status.text = "Item picked up. Click a destination slot, or click it again to cancel.";
+                Refresh();
+                return;
+            }
         }
         selection = index;
         Refresh();
+    }
+    private void OnSlotPointerClick(int index, PointerEventData.InputButton button)
+    {
+        if (!opened || button != PointerEventData.InputButton.Right) return;
+        selection = index;
+        moveFrom = -1;
+        switch (page)
+        {
+            case "backpack":
+                InventorySlotSaveData slot = game.Inventory.Data.slots[index];
+                FarmItem item = game.Content.Item(slot.itemId);
+                if (slot.IsEmpty) { status.text = "Empty slot."; break; }
+                if (item != null && item.kind == FarmItemKind.Food)
+                    game.Execute(() => game.Economy.Eat(index));
+                else if (index < 12)
+                    game.SelectHotbarSlot(index);
+                else
+                {
+                    int hotbar = game.Save.inventory.selectedHotbarSlot;
+                    if (game.Inventory.Move(index, hotbar))
+                    {
+                        game.SelectHotbarSlot(hotbar);
+                        status.text = "Equipped to the active hotbar slot.";
+                    }
+                    else status.text = "Could not equip that item.";
+                }
+                break;
+            case "shipping":
+                game.Execute(() => game.Economy.Ship(index, 1));
+                break;
+            case "storage":
+                TransferSelectedStack();
+                break;
+            default:
+                Refresh();
+                break;
+        }
+    }
+    private void TransferSelectedStack()
+    {
+        if (selection < 0) return;
+        InventoryService source = CurrentInventory;
+        game.Execute(() => source.TransferTo(withdrawing ? game.Inventory : game.Storage, selection, source.Data.slots[selection].count)
+            ? FarmResult.Ok("Stack transferred.")
+            : FarmResult.Fail("Transfer failed. Check available space."));
     }
     private InventoryService CurrentInventory => page == "storage" && withdrawing ? game.Storage : game.Inventory;
     private void Refresh()
@@ -116,7 +193,7 @@ public sealed class FarmHubPanel : UIPanel
             var item = game.Content.Item(slot.itemId);
             slotLabels[i].text = slot.IsEmpty ? (i + 1).ToString() : (item?.title ?? slot.displayName) + "\nx" + slot.count;
             icons[i].sprite = item?.icon; icons[i].enabled = !slot.IsEmpty && icons[i].sprite != null;
-            slots[i].image.color = i == selection ? CozyUi.Gold : i < 12 ? CozyUi.WoodLight : CozyUi.Wood;
+            slots[i].image.color = i == moveFrom ? CozyUi.Leaf : i == selection ? CozyUi.Gold : i < 12 ? CozyUi.WoodLight : CozyUi.Wood;
         }
         for (int i = 0; i < tabs.Length; i++) tabs[i].image.color = page == tabIds[i] ? CozyUi.Leaf : CozyUi.WoodLight;
         detail.text = "";
@@ -125,12 +202,12 @@ public sealed class FarmHubPanel : UIPanel
         {
             case "backpack":
                 title.text = "BACKPACK";
-                detail.text += "\n\nFirst 12 slots are your hotbar. Select an item, choose Move, then its destination.";
-                ActionButton("MOVE / SWAP", () => { if (selection >= 0 && !game.Inventory.Data.slots[selection].IsEmpty) { moveFrom = selection; status.text = "Select a destination slot."; } });
-                ActionButton("EAT", () => game.Execute(() => game.Economy.Eat(selection)));
+                detail.text += "\n\nLeft click picks up and places a stack. Right click equips tools/seeds or eats food. The first 12 slots are your hotbar.";
+                ActionButton("EAT", () => { moveFrom = -1; game.Execute(() => game.Economy.Eat(selection)); });
                 ActionButton("EQUIP", () =>
                 {
                     if (selection < 0) return;
+                    moveFrom = -1;
                     if (selection >= 12)
                     {
                         int hotbar = game.Save.inventory.selectedHotbarSlot;
@@ -153,20 +230,15 @@ public sealed class FarmHubPanel : UIPanel
                 break;
             case "shipping":
                 title.text = "SHIPPING BIN";
-                detail.text += "\n\nPending payment: " + game.Economy.PendingIncome + "g\nShipped items are sold when you sleep. Confirm with the buttons below.";
+                detail.text += "\n\nPending payment: " + game.Economy.PendingIncome + "g\nRight click ships one. Shipped items are sold when you sleep.";
                 ActionButton("SHIP 1", () => game.Execute(() => game.Economy.Ship(selection, 1)));
                 ActionButton("SHIP STACK", () => { int count = selection >= 0 ? game.Inventory.Data.slots[selection].count : 0; game.Execute(() => game.Economy.Ship(selection, count)); });
                 break;
             case "storage":
                 title.text = withdrawing ? "STORAGE > BACKPACK" : "BACKPACK > STORAGE";
-                detail.text += "\n\nStore items safely in the farm chest. Both inventories are saved with your farm.";
+                detail.text += "\n\nRight click transfers a stack. Both inventories are saved with your farm.";
                 ActionButton(withdrawing ? "DEPOSIT VIEW" : "WITHDRAW VIEW", () => { withdrawing = !withdrawing; selection = -1; Refresh(); });
-                ActionButton("TRANSFER STACK", () => game.Execute(() =>
-                {
-                    if (selection < 0) return FarmResult.Fail("Select a stack.");
-                    var source = CurrentInventory;
-                    return source.TransferTo(withdrawing ? game.Inventory : game.Storage, selection, source.Data.slots[selection].count) ? FarmResult.Ok("Stack transferred.") : FarmResult.Fail("Transfer failed. Check available space.");
-                }));
+                ActionButton("TRANSFER STACK", TransferSelectedStack);
                 break;
             case "crafting":
                 title.text = "CRAFTING";

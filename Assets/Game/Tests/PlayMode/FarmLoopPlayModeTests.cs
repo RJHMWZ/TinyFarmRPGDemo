@@ -98,6 +98,8 @@ public sealed class FarmLoopPlayModeTests
         root.UI.Close(FarmHubPanel.PanelId);
         panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "backpack" });
         yield return null;
+        Click(panel, "Slot4"); Click(panel, "Slot5");
+        Assert.That(game.Save.inventory.slots[5].itemId, Is.EqualTo("parsnip-seed"), "Two clicks should pick up and place a stack without a separate Move command.");
         Capture("farm-backpack-4x3.png", 1024, 768);
         root.UI.Close(FarmHubPanel.PanelId);
         Assert.That(root.Pause.IsPaused, Is.False);

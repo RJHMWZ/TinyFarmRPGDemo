@@ -21,7 +21,9 @@ public sealed class GameplayHudController : MonoBehaviour
     private TMP_Text dateText;
     private TMP_Text moneyText;
     private readonly TMP_Text[] hotbarLabels = new TMP_Text[12];
+    private readonly TMP_Text[] hotbarCountLabels = new TMP_Text[12];
     private readonly Image[] hotbarImages = new Image[12];
+    private readonly Image[] hotbarItemIcons = new Image[12];
     private GameObject modal;
     private float hudRefreshTimer;
     private TMP_Text energyText;
@@ -166,14 +168,23 @@ public sealed class GameplayHudController : MonoBehaviour
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(-454f + i * 82.5f, 0f), new Vector2(72f, 72f),
                 () => SelectHotbarSlot(slotIndex), out TextMeshProUGUI label);
-            label.fontSize = 17f;
+            label.fontSize = 14f;
             label.enableWordWrapping = false;
-            label.enableAutoSizing = true;
-            label.fontSizeMin = 10f;
-            label.fontSizeMax = 17f;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.alignment = TextAlignmentOptions.TopLeft;
+            label.margin = new Vector4(7f, 4f, 0f, 0f);
+            RectTransform iconRect = CozyUi.Rect(button.transform, "ItemIcon", Vector2.one * 0.5f,
+                Vector2.one * 0.5f, Vector2.one * 0.5f, new Vector2(0f, 2f), new Vector2(42f, 42f));
+            Image itemIcon = iconRect.gameObject.AddComponent<Image>();
+            itemIcon.preserveAspect = true;
+            itemIcon.raycastTarget = false;
+            TMP_Text countLabel = CozyUi.Text(button.transform, "Count", "", 13f,
+                TextAlignmentOptions.BottomRight, CozyUi.Cream, Vector2.zero, Vector2.one,
+                Vector2.one * 0.5f, Vector2.zero, new Vector2(-10f, -8f));
+            countLabel.fontStyle = FontStyles.Bold;
             hotbarLabels[i] = label;
+            hotbarCountLabels[i] = countLabel;
             hotbarImages[i] = button.image;
+            hotbarItemIcons[i] = itemIcon;
         }
     }
 
@@ -204,9 +215,11 @@ public sealed class GameplayHudController : MonoBehaviour
         for (int i = 0; i < hotbarLabels.Length; i++)
         {
             InventorySlotSaveData slot = save.inventory.slots[i];
-            string content = slot.IsEmpty ? "-" : ShortName(slot.displayName);
-            if (!slot.IsEmpty && slot.count > 1) content += " x" + slot.count;
-            hotbarLabels[i].text = (i + 1) + "\n" + content;
+            FarmItem item = farm != null ? farm.Game.Content.Item(slot.itemId) : null;
+            hotbarLabels[i].text = HotbarKeyName(i);
+            hotbarCountLabels[i].text = !slot.IsEmpty && slot.count > 1 ? "x" + slot.count : "";
+            hotbarItemIcons[i].sprite = item?.icon;
+            hotbarItemIcons[i].enabled = !slot.IsEmpty && hotbarItemIcons[i].sprite != null;
             hotbarImages[i].color = i == save.inventory.selectedHotbarSlot ? CozyUi.Gold : CozyUi.WoodLight;
         }
     }
@@ -407,10 +420,10 @@ public sealed class GameplayHudController : MonoBehaviour
         return char.ToUpperInvariant(weatherId[0]) + weatherId.Substring(1);
     }
 
-    private static string ShortName(string value)
+    private static string HotbarKeyName(int index)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "Item";
-        if (value.Length <= 10) return value;
-        return value.Substring(0, 9) + ".";
+        if (index < 9) return (index + 1).ToString();
+        if (index == 9) return "0";
+        return index == 10 ? "-" : "=";
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -9,6 +10,7 @@ public sealed class FarmInteraction : MonoBehaviour
     private PlayerMovement movement;
     private Vector2 facing = Vector2.down;
     private float nextAction;
+    private readonly HashSet<string> mouseDragTargets = new HashSet<string>();
     public void Initialize(FarmRuntime owner) { runtime = owner; movement = GetComponent<PlayerMovement>(); }
     private void Update()
     {
@@ -28,29 +30,48 @@ public sealed class FarmInteraction : MonoBehaviour
             if (keyboard.tabKey.wasPressedThisFrame) { root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "journal" }); return; }
         }
         bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-        if (mouse != null && !overUi && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.1f)
+        if (mouse != null && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.1f)
         { selected = (selected + (mouse.scroll.ReadValue().y > 0 ? 11 : 1)) % 12; selectionInput = true; }
         if (selectionInput) runtime.Game.SelectHotbarSlot(selected);
-        FarmWorldTarget target = FindTarget((Vector2)transform.position + facing * 0.85f, false);
+        FarmWorldTarget facingTarget = FindTarget((Vector2)transform.position + facing * 0.85f, false);
+        FarmWorldTarget pointerTarget = null;
         if (mouse != null && !overUi && Camera.main != null)
         {
             Vector2 point = Camera.main.ScreenToWorldPoint(mouse.position.ReadValue());
-            var pointed = FindTarget(point, true);
-            if (pointed != null) target = pointed;
+            pointerTarget = FindTarget(point, true);
         }
+        FarmWorldTarget target = pointerTarget ?? facingTarget;
         runtime.World.SetHighlight(target);
-        runtime.InteractionHint = target == null ? "Move close to a plot or station. Space: interact   Tab: journal" : Describe(target);
-        bool use = keyboard != null && keyboard.spaceKey.wasPressedThisFrame ||
-                   mouse != null && !overUi && mouse.leftButton.wasPressedThisFrame ||
-                   Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame;
-        if (!use || target == null || Time.unscaledTime < nextAction) return;
-        nextAction = Time.unscaledTime + 0.18f;
-        var game = runtime.Game;
-        switch (target.Kind)
+        runtime.InteractionHint = target == null ? "Move close to a target. Left click: use   Right click / Space: interact" : Describe(target);
+
+        bool keyboardUse = keyboard != null && keyboard.spaceKey.wasPressedThisFrame;
+        bool gamepadUse = Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame;
+        bool mouseHeld = mouse != null && !overUi && mouse.leftButton.isPressed;
+        if (!mouseHeld) mouseDragTargets.Clear();
+        bool mouseUse = mouseHeld && pointerTarget != null && !mouseDragTargets.Contains(pointerTarget.Id);
+        bool mouseInteract = mouse != null && !overUi && mouse.rightButton.wasPressedThisFrame;
+        FarmWorldTarget actionTarget = mouseUse || mouseInteract ? pointerTarget : facingTarget;
+
+        if (mouseInteract && actionTarget == null)
         {
-            case "plot": game.Execute(() => game.Farming.UsePlot(target.PlotIndex, selected)); break;
-            case "wood": case "stone": case "berry": game.Execute(() => game.Farming.Gather(target.Id, target.Kind, selected)); break;
-            default: root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = target.Kind, npcId = target.Id }); break;
+            FarmItem selectedItem = runtime.Game.Content.Item(runtime.Game.Save.inventory.slots[selected].itemId);
+            if (selectedItem != null && selectedItem.kind == FarmItemKind.Food && Time.unscaledTime >= nextAction)
+            {
+                nextAction = Time.unscaledTime + 0.22f;
+                runtime.Game.Execute(() => runtime.Game.Economy.Eat(selected));
+            }
+            return;
+        }
+
+        if (!(keyboardUse || gamepadUse || mouseUse || mouseInteract) || actionTarget == null || Time.unscaledTime < nextAction) return;
+        nextAction = Time.unscaledTime + 0.12f;
+        if (mouseUse) mouseDragTargets.Add(actionTarget.Id);
+        var game = runtime.Game;
+        switch (actionTarget.Kind)
+        {
+            case "plot": game.Execute(() => game.Farming.UsePlot(actionTarget.PlotIndex, selected)); break;
+            case "wood": case "stone": case "berry": game.Execute(() => game.Farming.Gather(actionTarget.Id, actionTarget.Kind, selected)); break;
+            default: root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = actionTarget.Kind, npcId = actionTarget.Id }); break;
         }
     }
     private FarmWorldTarget FindTarget(Vector2 point, bool pointer)
@@ -67,9 +88,9 @@ public sealed class FarmInteraction : MonoBehaviour
     }
     private string Describe(FarmWorldTarget target)
     {
-        if (target.Kind != "plot") return "Space / Click: " + target.Title;
+        if (target.Kind != "plot") return "Right click / Space: " + target.Title;
         var plot = runtime.Game.Save.farm.plots[target.PlotIndex];
-        if (runtime.Game.Farming.IsReady(plot)) return "Space / Click: Harvest ripe crop";
+        if (runtime.Game.Farming.IsReady(plot)) return "Left click / Space: Harvest ripe crop";
         FarmCrop crop = runtime.Game.Content.Crop(plot.seedId);
         if (crop != null) return runtime.Game.Content.Item(crop.harvestId).title + "  " + plot.growth + "/" + crop.growthDays + " days | " + (plot.watered ? "Watered" : "Needs water");
         return plot.tilled ? "Tilled plot | Select seeds to plant" : "Empty plot | Select hoe to till";
