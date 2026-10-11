@@ -31,14 +31,27 @@ public sealed class FarmEconomyService
             return FarmResult.Fail("This item cannot be shipped.");
         long value = PendingIncome + (long)item.sellPrice * count + save.player.money;
         if (value > int.MaxValue) return FarmResult.Fail("Shipping value exceeds the gold limit.");
-        if (!inventory.Remove(item.id, count)) return FarmResult.Fail("Item unavailable.");
+        if (!inventory.RemoveFromSlot(slotIndex, count)) return FarmResult.Fail("Item unavailable.");
         save.farm.shipments.Add(new FarmShipment { itemId = item.id, count = count, unitPrice = item.sellPrice });
+        save.farm.lastShipmentRecoverable = true;
         progression.Record("ship", count);
         return FarmResult.Ok("Shipped " + count + " " + item.title + ". Paid after sleep.");
     }
     public long PendingIncome
     {
         get { long total = 0; foreach (var line in save.farm.shipments) total += (long)line.count * Math.Max(0, line.unitPrice); return total; }
+    }
+    public FarmShipment RecoverableShipment => save.farm.lastShipmentRecoverable && save.farm.shipments.Count > 0
+        ? save.farm.shipments[save.farm.shipments.Count - 1] : null;
+    public FarmResult UndoLastShipment()
+    {
+        var shipment = RecoverableShipment;
+        if (shipment == null) return FarmResult.Fail("No recent shipment to retrieve.");
+        if (!inventory.Add(shipment.itemId, shipment.count)) return FarmResult.Fail("Backpack full. Make room to retrieve the shipment.");
+        save.farm.shipments.RemoveAt(save.farm.shipments.Count - 1);
+        save.farm.lastShipmentRecoverable = false;
+        progression.RevertRecord("ship", shipment.count);
+        return FarmResult.Ok("Retrieved " + shipment.count + " " + (content.Item(shipment.itemId)?.title ?? shipment.itemId) + ".");
     }
     public int SettleShipping()
     {
@@ -47,6 +60,7 @@ public sealed class FarmEconomyService
         save.farm.lastShippingIncome = income;
         save.farm.totalEarnings = (int)Math.Min(int.MaxValue, (long)save.farm.totalEarnings + income);
         save.farm.shipments.Clear();
+        save.farm.lastShipmentRecoverable = false;
         progression.Record("earn", income);
         return income;
     }
@@ -71,7 +85,7 @@ public sealed class FarmEconomyService
         FarmItem item = content.Item(slot.itemId);
         if (slot.IsEmpty || item == null || item.energy <= 0) return FarmResult.Fail("This item cannot be eaten.");
         if (save.farm.energy >= 100) return FarmResult.Fail("Energy is already full.");
-        inventory.Remove(item.id, 1);
+        if (!inventory.RemoveFromSlot(slotIndex, 1)) return FarmResult.Fail("Item unavailable.");
         save.farm.energy = Math.Min(100, save.farm.energy + item.energy);
         return FarmResult.Ok("Ate " + item.title + ". Energy restored.");
     }

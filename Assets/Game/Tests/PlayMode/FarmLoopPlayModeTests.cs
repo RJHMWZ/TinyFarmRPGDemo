@@ -105,6 +105,49 @@ public sealed class FarmLoopPlayModeTests
         Assert.That(root.Pause.IsPaused, Is.False);
     }
     [UnityTest]
+    public IEnumerator InventoryPanels_OrganizeQuickStackAndRetrieveLatestShipment()
+    {
+        var game = FarmRuntime.Active.Game;
+        game.Save.inventory.slots[14].Set("wood", "Wood", 40);
+        game.Save.inventory.slots[22].Set("wood", "Wood", 80);
+        var panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "backpack" });
+        yield return null;
+        Click(panel, "Action2");
+        Assert.That(game.Save.inventory.slots[0].itemId, Is.EqualTo("hoe"));
+        Assert.That(game.Save.inventory.slots[4].count, Is.EqualTo(15));
+        Assert.That(game.Save.inventory.slots[12].count, Is.EqualTo(99));
+        Assert.That(game.Save.inventory.slots[13].count, Is.EqualTo(21));
+        Capture("farm-organized.png", 1024, 768);
+        root.UI.Close(FarmHubPanel.PanelId);
+
+        game.Storage.Add("wood", 1);
+        panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "storage" });
+        yield return null;
+        Click(panel, "Action2");
+        Assert.That(game.Inventory.Count("wood"), Is.Zero);
+        Assert.That(game.Storage.Count("wood"), Is.EqualTo(121));
+        Click(panel, "Action0"); Click(panel, "Action2");
+        Assert.That(game.Storage.Data.slots[0].count, Is.EqualTo(99));
+        Capture("farm-storage.png", 1280, 720);
+        root.UI.Close(FarmHubPanel.PanelId);
+
+        game.Save.inventory.slots[12].Set("parsnip", "Parsnip", 3);
+        panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "shipping" });
+        yield return null;
+        var undoButton = panel.GetComponentsInChildren<Button>(true).First(x => x.name == "Action2");
+        Assert.That(undoButton.interactable, Is.False);
+        Click(panel, "Slot12"); Click(panel, "Action1");
+        Assert.That(game.Inventory.Count("parsnip"), Is.Zero);
+        Assert.That(undoButton.interactable, Is.True);
+        Capture("farm-shipping-undo.png", 1600, 900);
+        Click(panel, "Action2");
+        Assert.That(game.Inventory.Count("parsnip"), Is.EqualTo(3));
+        Assert.That(game.Economy.PendingIncome, Is.Zero);
+        Assert.That(undoButton.interactable, Is.False);
+        root.UI.Close(FarmHubPanel.PanelId);
+        Assert.That(root.Pause.IsPaused, Is.False);
+    }
+    [UnityTest]
     public IEnumerator Sleeping_PersistsFarmAndReloadsSceneState()
     {
         var game = FarmRuntime.Active.Game;

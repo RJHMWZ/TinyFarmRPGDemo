@@ -95,6 +95,10 @@ public sealed class FarmContent : ScriptableObject
     public Sprite chest;
     public Sprite bed;
     private Dictionary<string, FarmItem> byId;
+    private Dictionary<string, FarmCrop> cropsById;
+    private Dictionary<string, FarmRecipe> recipesById;
+    private Dictionary<string, FarmQuest> questsById;
+    private Dictionary<string, FarmNpc> villagersById;
 
     public FarmItem Item(string id)
     {
@@ -103,15 +107,31 @@ public sealed class FarmContent : ScriptableObject
         byId.TryGetValue(id, out FarmItem value);
         return value;
     }
-    public FarmCrop Crop(string seedId) => Array.Find(crops, x => x != null && x.seedId == seedId);
-    public FarmRecipe Recipe(string id) => Array.Find(recipes, x => x != null && x.id == id);
-    public FarmQuest Quest(string id) => Array.Find(quests, x => x != null && x.id == id);
-    public FarmNpc Npc(string id) => Array.Find(villagers, x => x != null && x.id == id);
+    public FarmCrop Crop(string seedId) { if (byId == null) RebuildIndex(); return Find(cropsById, seedId); }
+    public FarmRecipe Recipe(string id) { if (byId == null) RebuildIndex(); return Find(recipesById, id); }
+    public FarmQuest Quest(string id) { if (byId == null) RebuildIndex(); return Find(questsById, id); }
+    public FarmNpc Npc(string id) { if (byId == null) RebuildIndex(); return Find(villagersById, id); }
     public void RebuildIndex()
     {
-        byId = new Dictionary<string, FarmItem>(StringComparer.Ordinal);
-        foreach (FarmItem item in items)
-            if (item != null && !string.IsNullOrEmpty(item.id) && !byId.ContainsKey(item.id)) byId.Add(item.id, item);
+        byId = BuildIndex(items, x => x.id);
+        cropsById = BuildIndex(crops, x => x.seedId);
+        recipesById = BuildIndex(recipes, x => x.id);
+        questsById = BuildIndex(quests, x => x.id);
+        villagersById = BuildIndex(villagers, x => x.id);
+    }
+    private static T Find<T>(Dictionary<string, T> index, string id) where T : class
+        => !string.IsNullOrEmpty(id) && index.TryGetValue(id, out T value) ? value : null;
+    private static Dictionary<string, T> BuildIndex<T>(T[] definitions, Func<T, string> getId) where T : class
+    {
+        var index = new Dictionary<string, T>(StringComparer.Ordinal);
+        if (definitions == null) return index;
+        foreach (T definition in definitions)
+        {
+            if (definition == null) continue;
+            string id = getId(definition);
+            if (!string.IsNullOrEmpty(id) && !index.ContainsKey(id)) index.Add(id, definition);
+        }
+        return index;
     }
     private void OnEnable() => RebuildIndex();
     private void OnValidate() => RebuildIndex();

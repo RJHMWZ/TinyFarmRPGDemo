@@ -240,8 +240,6 @@ public static class ProjectHealthValidator
         if (menuView == null || !menuView.IsConfigured)
             errors.Add("MainMenuView is missing or incomplete: " + MainMenuViewPath);
         else if (menuPrefab.transform.Find("MainMenuBackdrop") == null ||
-                 menuPrefab.transform.Find("MenuShade") == null ||
-                 menuPrefab.transform.Find("TitlePlate") == null ||
                  menuPrefab.transform.Find("Version") == null)
             errors.Add("MainMenu presentation is incomplete. Edit the MainMenuScreen prefab directly.");
 

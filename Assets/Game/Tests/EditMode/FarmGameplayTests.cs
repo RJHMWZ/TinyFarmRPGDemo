@@ -17,6 +17,139 @@ public sealed class FarmGameplayTests
         game = new FarmGame(GameSaveData.CreateNew(new CharacterCreationProfile { playerName = "Farmer" }), content);
     }
     [Test] public void AuthoredContent_HasValidReferencesAndNoDuplicateIds() => Assert.That(content.ValidateContent().ToArray(), Is.Empty);
+    [TestCase(-1, 1)] [TestCase(24, 1)] [TestCase(4, 0)] [TestCase(4, 16)]
+    public void Inventory_RemoveFromSlotRejectsInvalidRequestsWithoutMutation(int slot, int count)
+    {
+        string before = JsonUtility.ToJson(game.Save.inventory);
+        Assert.That(game.Inventory.RemoveFromSlot(slot, count), Is.False);
+        Assert.That(JsonUtility.ToJson(game.Save.inventory), Is.EqualTo(before));
+    }
+    [Test] public void Farming_ConsumesSelectedSeedAndConsumableStacks()
+    {
+        game.Save.inventory.slots[12].Set("parsnip-seed", "Parsnip Seeds", 2);
+        Assert.That(game.Farming.UsePlot(0, 0).Success, Is.True);
+        Assert.That(game.Farming.UsePlot(0, 12).Success, Is.True);
+        Assert.That(game.Save.inventory.slots[4].count, Is.EqualTo(15));
+        Assert.That(game.Save.inventory.slots[12].count, Is.EqualTo(1));
+        Assert.That(game.Farming.UsePlot(1, 0).Success, Is.True);
+        foreach (string id in new[] { "fertilizer", "sprinkler" })
+        {
+            game.Save.inventory.slots[6].Set(id, id, 3);
+            game.Save.inventory.slots[13].Set(id, id, 2);
+            Assert.That(game.Farming.UsePlot(1, 13).Success, Is.True);
+            Assert.That(game.Save.inventory.slots[6].count, Is.EqualTo(3));
+            Assert.That(game.Save.inventory.slots[13].count, Is.EqualTo(1));
+        }
+    }
+    [Test] public void EatingShippingAndGifts_ConsumeOnlySelectedStack()
+    {
+        var food = content.items.First(x => x.energy > 0);
+        game.Save.inventory.slots[6].Set(food.id, food.title, 5);
+        game.Save.inventory.slots[14].Set(food.id, food.title, 3);
+        game.Save.farm.energy = 50;
+        Assert.That(game.Economy.Eat(14).Success, Is.True);
+        Assert.That(game.Save.inventory.slots[6].count, Is.EqualTo(5));
+        Assert.That(game.Save.inventory.slots[14].count, Is.EqualTo(2));
+        Assert.That(game.Economy.Ship(14, 1).Success, Is.True);
+        Assert.That(game.Save.inventory.slots[6].count, Is.EqualTo(5));
+        Assert.That(game.Save.inventory.slots[14].count, Is.EqualTo(1));
+        Assert.That(game.Progression.Gift(content.villagers[0].id, 14, game.Inventory).Success, Is.True);
+        Assert.That(game.Save.inventory.slots[6].count, Is.EqualTo(5));
+        Assert.That(game.Save.inventory.slots[14].IsEmpty, Is.True);
+    }
+    [Test] public void OrganizeBackpack_MergesLowerSlotsAndPreservesHotbarAndUnknownItems()
+    {
+        game.Save.inventory.selectedHotbarSlot = 4;
+        game.Save.inventory.slots[5].Set("wood", "Wood", 10);
+        string hotbar = string.Join("|", game.Save.inventory.slots.Take(12).Select(JsonUtility.ToJson));
+        game.Save.inventory.slots[16].Set("wood", "Wood", 80);
+        game.Save.inventory.slots[23].Set("wood", "Wood", 40);
+        game.Save.inventory.slots[19].Set("retired-item", "Legacy Item", 120);
+        Assert.That(game.InventoryActions.OrganizeBackpack().Success, Is.True);
+        Assert.That(string.Join("|", game.Save.inventory.slots.Take(12).Select(JsonUtility.ToJson)), Is.EqualTo(hotbar));
+        Assert.That(game.Save.inventory.selectedHotbarSlot, Is.EqualTo(4));
+        Assert.That(game.Save.inventory.slots[12].count, Is.EqualTo(99));
+        Assert.That(game.Save.inventory.slots[13].count, Is.EqualTo(21));
+        Assert.That(game.Inventory.Count("wood"), Is.EqualTo(130));
+        Assert.That(game.Inventory.Count("retired-item"), Is.EqualTo(120));
+        string organized = JsonUtility.ToJson(game.Save.inventory);
+        game.InventoryActions.OrganizeBackpack();
+        Assert.That(JsonUtility.ToJson(game.Save.inventory), Is.EqualTo(organized));
+    }
+    [Test] public void QuickStack_MatchesExistingItemsFillsPartialSpaceAndKeepsTools()
+    {
+        foreach (var slot in game.Save.farm.storage.slots) slot.Set("stone", "Stone", 99);
+        game.Save.farm.storage.slots[0].Set("wood", "Wood", 98);
+        game.Save.farm.storage.slots[1].Set("hoe", "Hoe", 1);
+        game.Save.inventory.slots[6].Set("wood", "Wood", 20);
+        game.Save.inventory.slots[7].Set("berry", "Berry", 5);
+        Assert.That(game.InventoryActions.QuickStack().Success, Is.True);
+        Assert.That(game.Storage.Count("wood"), Is.EqualTo(99));
+        Assert.That(game.Inventory.Count("wood"), Is.EqualTo(19));
+        Assert.That(game.Inventory.Count("berry"), Is.EqualTo(5));
+        Assert.That(game.Inventory.Count("hoe"), Is.EqualTo(1));
+        string before = JsonUtility.ToJson(game.Save);
+        Assert.That(game.InventoryActions.QuickStack().Success, Is.False);
+        Assert.That(JsonUtility.ToJson(game.Save), Is.EqualTo(before));
+    }
+    [Test] public void HalfStackTransfer_RoundsUpAndPreservesBothInventoriesWhenFull()
+    {
+        Assert.That(game.InventoryActions.Transfer(false, 4, true).Success, Is.True);
+        Assert.That(game.Inventory.Count("parsnip-seed"), Is.EqualTo(7));
+        Assert.That(game.Storage.Count("parsnip-seed"), Is.EqualTo(8));
+        foreach (var slot in game.Save.farm.storage.slots) slot.Set("stone", "Stone", 99);
+        string before = JsonUtility.ToJson(game.Save);
+        Assert.That(game.InventoryActions.Transfer(false, 4, true).Success, Is.False);
+        Assert.That(JsonUtility.ToJson(game.Save), Is.EqualTo(before));
+    }
+    [Test] public void ShippingUndo_RestoresOnlyLatestShipmentAndRollsBackItsCounter()
+    {
+        game.Save.inventory.slots[6].Set("parsnip", "Parsnip", 5);
+        Assert.That(game.Economy.Ship(6, 2).Success, Is.True);
+        Assert.That(game.Economy.Ship(6, 3).Success, Is.True);
+        var reloaded = new FarmGame(JsonUtility.FromJson<GameSaveData>(JsonUtility.ToJson(game.Save)), content);
+        Assert.That(reloaded.Economy.UndoLastShipment().Success, Is.True);
+        Assert.That(reloaded.Inventory.Count("parsnip"), Is.EqualTo(3));
+        Assert.That(reloaded.Progression.Counter("ship"), Is.EqualTo(2));
+        Assert.That(reloaded.Economy.PendingIncome, Is.EqualTo(2 * content.Item("parsnip").sellPrice));
+        Assert.That(reloaded.Economy.UndoLastShipment().Success, Is.False);
+        int money = reloaded.Save.player.money;
+        reloaded.Sleep();
+        Assert.That(reloaded.Save.player.money, Is.EqualTo(money + 2 * content.Item("parsnip").sellPrice));
+        Assert.That(reloaded.Economy.RecoverableShipment, Is.Null);
+    }
+    [Test] public void ShippingUndo_FullBackpackPreservesShipmentAndRetryRemainsAvailable()
+    {
+        game.Save.inventory.slots[6].Set("parsnip", "Parsnip", 2);
+        game.Economy.Ship(6, 2);
+        FillBackpack();
+        string before = JsonUtility.ToJson(game.Save);
+        Assert.That(game.Economy.UndoLastShipment().Success, Is.False);
+        Assert.That(JsonUtility.ToJson(game.Save), Is.EqualTo(before));
+        game.Save.inventory.slots[6].Set(null, null, 0);
+        Assert.That(game.Economy.UndoLastShipment().Success, Is.True);
+        Assert.That(game.Inventory.Count("parsnip"), Is.EqualTo(2));
+    }
+    [Test] public void StateNotifications_ClockAndHotbarDoNotInvalidateWorld()
+    {
+        int worldChanges = 0, clockChanges = 0, inventoryChanges = 0;
+        game.StateChanged += changes =>
+        {
+            if ((changes & FarmChange.World) != 0) worldChanges++;
+            if ((changes & FarmChange.Clock) != 0) clockChanges++;
+            if ((changes & FarmChange.Inventory) != 0) inventoryChanges++;
+        };
+        game.Tick(content.secondsPerTenMinutes);
+        game.SelectHotbarSlot(1);
+        game.Execute(game.InventoryActions.OrganizeBackpack, FarmChange.Inventory);
+        Assert.That(clockChanges, Is.EqualTo(1));
+        Assert.That(inventoryChanges, Is.EqualTo(1));
+        Assert.That(worldChanges, Is.Zero);
+        game.Execute(() => game.Farming.UsePlot(0, 0));
+        Assert.That(worldChanges, Is.EqualTo(1));
+        game.Sleep();
+        Assert.That(worldChanges, Is.EqualTo(2));
+    }
     [Test] public void Inventory_AddOverflow_DoesNotPartiallyFillStacks()
     {
         FillBackpack();

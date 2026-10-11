@@ -90,7 +90,7 @@ public sealed class FarmWorldView : MonoBehaviour
         nightOverlay = Draw("Nightfall", Vector2.zero, null, Color.clear, new Vector2(28, 20), 700);
         if (Mathf.Abs(runtime.Player.position.x) > 12 || Mathf.Abs(runtime.Player.position.y) > 8)
             runtime.Player.position = Vector3.zero;
-        runtime.Game.Changed += Refresh;
+        runtime.Game.StateChanged += OnStateChanged;
         Refresh();
     }
     public static Vector2 PlotPosition(int index) => new Vector2(1 + index % FarmSaveData.Width, 1 - index / FarmSaveData.Width);
@@ -140,6 +140,10 @@ public sealed class FarmWorldView : MonoBehaviour
         go.transform.SetParent(worldRoot, false); go.transform.position = position;
         go.AddComponent<BoxCollider2D>().size = size;
     }
+    private void OnStateChanged(FarmChange changes)
+    {
+        if ((changes & FarmChange.World) != 0) Refresh();
+    }
     private void Refresh()
     {
         var game = runtime.Game;
@@ -179,7 +183,7 @@ public sealed class FarmWorldView : MonoBehaviour
     }
     private void OnDestroy()
     {
-        if (runtime != null && runtime.Game != null) runtime.Game.Changed -= Refresh;
+        if (runtime != null && runtime.Game != null) runtime.Game.StateChanged -= OnStateChanged;
         if (square != null) Destroy(square);
         if (pixel != null) Destroy(pixel);
     }

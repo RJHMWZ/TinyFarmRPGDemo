@@ -47,7 +47,7 @@ public sealed class FarmRuntime : MonoBehaviour
         Game.Save.player.positionY = Player.position.y;
         Game.Save.world.currentScene = SceneManager.GetActiveScene().name;
         bool saved = root.Saves.Save(root.Session.ActiveSlot, Game.Save);
-        if (feedback || !saved) Game.Execute(() => saved ? FarmResult.Ok("Game saved.") : FarmResult.Fail("Save failed. Your session is still open; please retry."));
+        if (feedback || !saved) Game.Execute(() => saved ? FarmResult.Ok("Game saved.") : FarmResult.Fail("Save failed. Your session is still open; please retry."), FarmChange.None);
         return saved;
     }
     private void OnDayEnded()

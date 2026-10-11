@@ -10,6 +10,8 @@ public sealed class FarmInteraction : MonoBehaviour
     private PlayerMovement movement;
     private Vector2 facing = Vector2.down;
     private float nextAction;
+    private Camera worldCamera;
+    private static readonly Key[] HotbarKeys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9, Key.Digit0, Key.Minus, Key.Equals };
     private readonly HashSet<string> mouseDragTargets = new HashSet<string>();
     public void Initialize(FarmRuntime owner) { runtime = owner; movement = GetComponent<PlayerMovement>(); }
     private void Update()
@@ -17,7 +19,7 @@ public sealed class FarmInteraction : MonoBehaviour
         var root = GameRoot.Instance;
         if (runtime == null || root == null) return;
         if (root.InputModes.CurrentMode != GameInputMode.Gameplay || root.Pause.IsPaused || root.UI.LastClosedFrame == Time.frameCount)
-        { runtime.World.SetHighlight(null); return; }
+        { mouseDragTargets.Clear(); runtime.World.SetHighlight(null); return; }
         if (movement != null && movement.MoveInput.sqrMagnitude > 0.01f) facing = movement.MoveInput.normalized;
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
@@ -25,19 +27,19 @@ public sealed class FarmInteraction : MonoBehaviour
         bool selectionInput = false;
         if (keyboard != null)
         {
-            Key[] keys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9, Key.Digit0, Key.Minus, Key.Equals };
-            for (int i = 0; i < keys.Length; i++) if (keyboard[keys[i]].wasPressedThisFrame) { selected = i; selectionInput = true; }
+            for (int i = 0; i < HotbarKeys.Length; i++) if (keyboard[HotbarKeys[i]].wasPressedThisFrame) { selected = i; selectionInput = true; }
             if (keyboard.tabKey.wasPressedThisFrame) { root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "journal" }); return; }
         }
         bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-        if (mouse != null && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.1f)
+        if (mouse != null && !overUi && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.1f)
         { selected = (selected + (mouse.scroll.ReadValue().y > 0 ? 11 : 1)) % 12; selectionInput = true; }
         if (selectionInput) runtime.Game.SelectHotbarSlot(selected);
         FarmWorldTarget facingTarget = FindTarget((Vector2)transform.position + facing * 0.85f, false);
         FarmWorldTarget pointerTarget = null;
-        if (mouse != null && !overUi && Camera.main != null)
+        if (worldCamera == null) worldCamera = Camera.main;
+        if (mouse != null && !overUi && worldCamera != null)
         {
-            Vector2 point = Camera.main.ScreenToWorldPoint(mouse.position.ReadValue());
+            Vector2 point = worldCamera.ScreenToWorldPoint(mouse.position.ReadValue());
             pointerTarget = FindTarget(point, true);
         }
         FarmWorldTarget target = pointerTarget ?? facingTarget;
@@ -58,7 +60,7 @@ public sealed class FarmInteraction : MonoBehaviour
             if (selectedItem != null && selectedItem.kind == FarmItemKind.Food && Time.unscaledTime >= nextAction)
             {
                 nextAction = Time.unscaledTime + 0.22f;
-                runtime.Game.Execute(() => runtime.Game.Economy.Eat(selected));
+                runtime.Game.Execute(() => runtime.Game.Economy.Eat(selected), FarmChange.Inventory);
             }
             return;
         }
@@ -77,11 +79,11 @@ public sealed class FarmInteraction : MonoBehaviour
     private FarmWorldTarget FindTarget(Vector2 point, bool pointer)
     {
         FarmWorldTarget best = null;
-        float distance = pointer ? 0.8f : 1.3f;
+        float distance = pointer ? 0.8f * 0.8f : 1.3f * 1.3f;
         foreach (var target in runtime.World.Targets)
         {
-            if (Vector2.Distance(transform.position, target.Position) > 1.8f) continue;
-            float d = Vector2.Distance(point, target.Position);
+            if (((Vector2)transform.position - target.Position).sqrMagnitude > 1.8f * 1.8f) continue;
+            float d = (point - target.Position).sqrMagnitude;
             if (d < distance) { best = target; distance = d; }
         }
         return best;
