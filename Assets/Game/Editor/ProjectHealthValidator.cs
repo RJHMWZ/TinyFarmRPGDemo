@@ -49,6 +49,8 @@ public static class ProjectHealthValidator
         ValidatePrefabs(errors);
         try { FarmContentBuilder.ValidateOrThrow(); }
         catch (System.Exception exception) { errors.Add("Farm content: " + exception.Message); }
+        try { FarmActionAssetBuilder.ValidateOrThrow(); }
+        catch (System.Exception exception) { errors.Add("Tool actions: " + exception.Message); }
 
         if (errors.Count > 0)
             throw new BuildFailedException("Project validation failed:\n- " + string.Join("\n- ", errors));

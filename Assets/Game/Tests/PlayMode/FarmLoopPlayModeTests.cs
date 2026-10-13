@@ -10,7 +10,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
-public sealed class FarmLoopPlayModeTests
+public sealed partial class FarmLoopPlayModeTests
 {
     private GameRoot root;
     private string saveDirectory;

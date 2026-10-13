@@ -9,6 +9,7 @@ public sealed class FarmRuntime : MonoBehaviour
     public FarmGame Game { get; private set; }
     public Transform Player { get; private set; }
     public FarmWorldView World { get; private set; }
+    public FarmActionFeedback ActionFeedback { get; private set; }
     public string InteractionHint { get; internal set; }
     private float autosaveSeconds;
     public bool Initialize(Transform player)
@@ -27,6 +28,8 @@ public sealed class FarmRuntime : MonoBehaviour
         Game.DayEnded += OnDayEnded;
         World = gameObject.AddComponent<FarmWorldView>();
         World.Initialize(this);
+        ActionFeedback = gameObject.AddComponent<FarmActionFeedback>();
+        ActionFeedback.Initialize(this);
         var interaction = player.gameObject.AddComponent<FarmInteraction>();
         interaction.Initialize(this);
         return true;

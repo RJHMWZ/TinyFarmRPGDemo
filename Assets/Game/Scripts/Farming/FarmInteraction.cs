@@ -8,16 +8,36 @@ public sealed class FarmInteraction : MonoBehaviour
 {
     private FarmRuntime runtime;
     private PlayerMovement movement;
+    private PlayerAnimationController animationController;
+    private InputModeService inputModes;
     private Vector2 facing = Vector2.down;
     private float nextAction;
     private readonly HashSet<string> mouseDragTargets = new HashSet<string>();
-    public void Initialize(FarmRuntime owner) { runtime = owner; movement = GetComponent<PlayerMovement>(); }
+    public void Initialize(FarmRuntime owner)
+    {
+        runtime = owner;
+        movement = GetComponent<PlayerMovement>();
+        animationController = GetComponent<PlayerAnimationController>();
+        inputModes = GameRoot.Instance.InputModes;
+        inputModes.ModeChanged += OnModeChanged;
+        runtime.Game.DayEnded += CancelAction;
+    }
+    private void CancelAction() { if (animationController != null) animationController.CancelAction(); }
+    private void OnModeChanged(GameInputMode mode) { if (mode != GameInputMode.Gameplay) CancelAction(); }
+    private void OnDisable() => CancelAction();
+    private void OnDestroy()
+    {
+        CancelAction();
+        if (runtime != null && runtime.Game != null) runtime.Game.DayEnded -= CancelAction;
+        if (inputModes != null) inputModes.ModeChanged -= OnModeChanged;
+    }
     private void Update()
     {
         var root = GameRoot.Instance;
         if (runtime == null || root == null) return;
         if (root.InputModes.CurrentMode != GameInputMode.Gameplay || root.Pause.IsPaused || root.UI.LastClosedFrame == Time.frameCount)
         { runtime.World.SetHighlight(null); return; }
+        if (animationController != null && animationController.IsActing) return;
         if (movement != null && movement.MoveInput.sqrMagnitude > 0.01f) facing = movement.MoveInput.normalized;
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
@@ -69,10 +89,41 @@ public sealed class FarmInteraction : MonoBehaviour
         var game = runtime.Game;
         switch (actionTarget.Kind)
         {
-            case "plot": game.Execute(() => game.Farming.UsePlot(actionTarget.PlotIndex, selected)); break;
-            case "wood": case "stone": case "berry": game.Execute(() => game.Farming.Gather(actionTarget.Id, actionTarget.Kind, selected)); break;
+            case "plot": case "wood": case "stone": case "berry": TryUseTarget(actionTarget); break;
             default: root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = actionTarget.Kind, npcId = actionTarget.Id }); break;
         }
+    }
+    /// <summary>Starts one action. The target and selected stack are captured until its impact frame.</summary>
+    public bool TryUseTarget(FarmWorldTarget target)
+    {
+        var root = GameRoot.Instance;
+        if (runtime == null || target == null || root == null || root.Pause.IsPaused || root.InputModes.CurrentMode != GameInputMode.Gameplay ||
+            !runtime.World.Targets.Contains(target) || Vector2.Distance(transform.position, target.Position) > 1.8f ||
+            animationController == null || animationController.IsActing) return false;
+        var game = runtime.Game;
+        int slot = game.Save.inventory.selectedHotbarSlot;
+        string held = game.Save.inventory.slots[slot].itemId;
+        bool plot = target.Kind == "plot";
+        if (!plot && target.Kind != "wood" && target.Kind != "stone" && target.Kind != "berry") return false;
+        var crop = plot ? game.Content.Crop(game.Save.farm.plots[target.PlotIndex].seedId) : null;
+        bool harvest = plot && game.Farming.IsReady(game.Save.farm.plots[target.PlotIndex]);
+        PlayerAnimationType action = harvest || target.Kind == "berry" ? PlayerAnimationType.Harvest :
+            held == "hoe" ? PlayerAnimationType.Hoe : held == "watering-can" ? PlayerAnimationType.Water :
+            held == "axe" ? PlayerAnimationType.Axe : held == "pickaxe" ? PlayerAnimationType.Pickaxe : PlayerAnimationType.Plant;
+        string reward = harvest ? crop.harvestId : plot ? null : target.Kind;
+        int count = harvest ? crop.harvestCount + (game.Save.farm.plots[target.PlotIndex].fertilized ? 1 : 0) :
+            plot ? 0 : target.Kind == "berry" ? 2 : 5;
+        return animationController.PlayAction(action, target.Position - (Vector2)transform.position, () =>
+        {
+            if (runtime == null || Vector2.Distance(transform.position, target.Position) > 1.8f) return;
+            FarmResult result = game.Execute(() =>
+            {
+                if (game.Save.inventory.slots[slot].itemId != held || plot && game.Farming.IsReady(game.Save.farm.plots[target.PlotIndex]) != harvest)
+                    return FarmResult.Fail("The selected item or target changed. Try again.");
+                return plot ? game.Farming.UsePlot(target.PlotIndex, slot) : game.Farming.Gather(target.Id, target.Kind, slot);
+            });
+            runtime.ActionFeedback.Play(action, target, result, reward, count);
+        });
     }
     private FarmWorldTarget FindTarget(Vector2 point, bool pointer)
     {

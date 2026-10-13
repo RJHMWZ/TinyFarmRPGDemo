@@ -14,6 +14,30 @@ using UnityEngine;
 )]
 public sealed class PlayerPartAnimationSet : ScriptableObject
 {
+    [System.Serializable]
+    public sealed class ActionFrames
+    {
+        public PlayerAnimationType action;
+        public Sprite[] frames = System.Array.Empty<Sprite>();
+    }
+
+    [SerializeField] private ActionFrames[] actions = System.Array.Empty<ActionFrames>();
+
+    public ActionFrames[] Actions => actions;
+    public Sprite IdleSprite => idleFrames != null && idleFrames.Length > 0 ? idleFrames[0] : null;
+
+    public bool HasAction(PlayerAnimationType action) => FindAction(action)?.frames?.Length >= 4;
+
+    private ActionFrames FindAction(PlayerAnimationType action)
+    {
+        if (action == PlayerAnimationType.Pickaxe) action = PlayerAnimationType.Hoe;
+        if (action == PlayerAnimationType.Plant) action = PlayerAnimationType.Harvest;
+        return System.Array.Find(actions ?? System.Array.Empty<ActionFrames>(), x => x != null && x.action == action);
+    }
+
+#if UNITY_EDITOR
+    public void SetActions(ActionFrames[] value) => actions = value;
+#endif
     [Header("Idle - 16帧")]
     [Tooltip("4方向 × 每方向4帧")]
     [SerializeField]
@@ -50,6 +74,17 @@ public sealed class PlayerPartAnimationSet : ScriptableObject
     /// </summary>
     public Sprite GetSprite(PlayerAnimationType animationType, PlayerDirection direction, int frameIndex)
     {
+        if (animationType != PlayerAnimationType.Idle && animationType != PlayerAnimationType.Walk)
+        {
+            var clip = FindAction(animationType);
+            if (clip != null && clip.frames != null && clip.frames.Length >= 4)
+            {
+                int count = clip.frames.Length / 4;
+                return clip.frames[GetDirectionBlock(direction) * count + Mathf.Clamp(frameIndex, 0, count - 1)];
+            }
+            // Optional parts without an authored action remain visible instead of disappearing.
+            return GetSprite(PlayerAnimationType.Idle, direction, 0);
+        }
         Sprite[] sprites;
         int framesPerDirection;
         switch (animationType)
@@ -88,6 +123,7 @@ public sealed class PlayerPartAnimationSet : ScriptableObject
     /// </summary>
     public int GetFrameCount(PlayerAnimationType animationType)
     {
+        if (HasAction(animationType)) return FindAction(animationType).frames.Length / 4;
         switch (animationType)
         {
             case PlayerAnimationType.Walk:

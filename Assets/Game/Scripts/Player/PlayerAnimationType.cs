@@ -5,7 +5,13 @@ public enum PlayerAnimationType
     Idle,
 
     /// <summary>行走。</summary>
-    Walk
+    Walk,
+    Hoe,
+    Pickaxe,
+    Axe,
+    Water,
+    Harvest,
+    Plant
 }
 
 /// <summary>四方向角色动画的朝向。</summary>

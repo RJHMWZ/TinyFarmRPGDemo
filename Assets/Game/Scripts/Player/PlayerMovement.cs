@@ -23,6 +23,12 @@ public sealed class PlayerMovement : MonoBehaviour
     private SettingsService settings;
     private InputAction runtimeMoveAction;
     private Vector2 moveInput;   // 当前帧输入
+    public bool ActionLocked { get; private set; }
+    public void SetActionLocked(bool locked)
+    {
+        ActionLocked = locked;
+        if (locked) moveInput = Vector2.zero;
+    }
 
     /// <summary>供动画控制器读取当前移动方向。</summary>
     public Vector2 MoveInput
@@ -98,7 +104,7 @@ public sealed class PlayerMovement : MonoBehaviour
     private void Update()
     {
         GameRoot root = GameRoot.Instance;
-        if (root != null && root.InputModes.CurrentMode != GameInputMode.Gameplay)
+        if (ActionLocked || root != null && (root.InputModes.CurrentMode != GameInputMode.Gameplay || root.Pause.IsPaused))
         {
             moveInput = Vector2.zero;
             return;
@@ -117,7 +123,7 @@ public sealed class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (moveInput.sqrMagnitude <= 0f) return;
+        if (ActionLocked || moveInput.sqrMagnitude <= 0f) return;
         Vector2 targetPosition = rb.position + moveInput * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(targetPosition);
     }

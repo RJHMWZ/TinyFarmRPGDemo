@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -31,6 +32,61 @@ public sealed class PlayerAnimationController : MonoBehaviour
     private int frameIndex;   // 当前动画播放到第几帧，从 0 开始。
 
     private float frameTimer; // 当前帧已经显示了多少秒。
+    private Action impact;
+    private float actionSeconds;
+    private FarmActionAssets actionAssets;
+    private SpriteRenderer toolRenderer;
+    public bool IsActing { get; private set; }
+    public PlayerAnimationType CurrentAnimation => currentAnimation;
+    public PlayerDirection CurrentDirection => currentDirection;
+    public int CurrentFrame => frameIndex;
+
+    public bool PlayAction(PlayerAnimationType action, Vector2 toward, Action onImpact)
+    {
+        if (!isActiveAndEnabled || IsActing || appearance == null || action == PlayerAnimationType.Idle || action == PlayerAnimationType.Walk) return false;
+        if (toolRenderer == null) toolRenderer = appearance.CreateToolRenderer();
+        if (actionAssets == null) actionAssets = Resources.Load<FarmActionAssets>("FarmActionAssets");
+        if (toward.sqrMagnitude > 0.001f)
+            currentDirection = Mathf.Abs(toward.x) > Mathf.Abs(toward.y)
+                ? toward.x > 0 ? PlayerDirection.Right : PlayerDirection.Left
+                : toward.y > 0 ? PlayerDirection.Up : PlayerDirection.Down;
+        currentAnimation = action;
+        impact = onImpact;
+        actionSeconds = 0;
+        IsActing = true;
+        movement.SetActionLocked(true);
+        ResetAnimation();
+        return true;
+    }
+
+    public void CancelAction()
+    {
+        impact = null;
+        IsActing = false;
+        if (movement != null) movement.SetActionLocked(false);
+        if (toolRenderer != null) toolRenderer.enabled = false;
+        currentAnimation = PlayerAnimationType.Idle;
+        if (appearance != null) ResetAnimation();
+    }
+
+    private void OnDisable() => CancelAction();
+
+    private void AdvanceAction(float seconds)
+    {
+        actionSeconds += seconds;
+        float fps = FarmActionAssets.FramesPerSecond(currentAnimation);
+        int count = appearance.HasAction(currentAnimation) ? appearance.GetFrameCount(currentAnimation) : FarmActionAssets.FrameCount(currentAnimation);
+        frameIndex = Mathf.Min(count - 1, Mathf.FloorToInt(actionSeconds * fps));
+        RefreshFrame();
+        if (actionSeconds * fps >= Mathf.Min(count - 1, FarmActionAssets.ImpactFrame(currentAnimation)) && impact != null)
+        {
+            Action callback = impact;
+            impact = null; // Clear before invoking; scene changes and skipped frames cannot hit twice.
+            try { callback(); }
+            catch { CancelAction(); throw; }
+        }
+        if (IsActing && actionSeconds * fps >= count) CancelAction();
+    }
 
     private void Awake()
     {
@@ -46,6 +102,17 @@ public sealed class PlayerAnimationController : MonoBehaviour
 
     private void Update()
     {
+        var root = GameRoot.Instance;
+        if (root != null)
+        {
+            if (root.InputModes.CurrentMode != GameInputMode.Gameplay)
+            {
+                if (IsActing) CancelAction();
+                return;
+            }
+            if (root.Pause.IsPaused) return;
+        }
+        if (IsActing) { AdvanceAction(Time.deltaTime); return; }
         UpdateState();
 
         UpdateDirection();
@@ -154,5 +221,10 @@ public sealed class PlayerAnimationController : MonoBehaviour
     private void RefreshFrame()
     {
         appearance.SetFrame(currentAnimation, currentDirection, frameIndex);
+        if (toolRenderer != null)
+        {
+            toolRenderer.sprite = IsActing && actionAssets != null ? actionAssets.GetTool(currentAnimation, currentDirection, frameIndex) : null;
+            toolRenderer.enabled = toolRenderer.sprite != null;
+        }
     }
 }

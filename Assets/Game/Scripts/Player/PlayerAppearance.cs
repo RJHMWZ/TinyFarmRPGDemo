@@ -51,6 +51,22 @@ public sealed class PlayerAppearance : MonoBehaviour
     public bool IsConfigured => skinRenderer != null && clothesRenderer != null && eyesRenderer != null &&
                                 hairRenderer != null && accessoryRenderer != null;
 
+    public bool HasAction(PlayerAnimationType action) => skin != null && skin.HasAction(action);
+
+    public SpriteRenderer CreateToolRenderer()
+    {
+        var tool = new GameObject("AnimatedTool").AddComponent<SpriteRenderer>();
+        tool.transform.SetParent(skinRenderer != null ? skinRenderer.transform : transform, false);
+        if (skinRenderer != null)
+        {
+            tool.sortingLayerID = skinRenderer.sortingLayerID;
+            tool.sortingOrder = accessoryRenderer != null ? accessoryRenderer.sortingOrder + 1 : skinRenderer.sortingOrder + 5;
+            tool.sharedMaterial = skinRenderer.sharedMaterial;
+        }
+        tool.enabled = false;
+        return tool;
+    }
+
 
     /// <summary>
     /// 刷新整个角色的当前帧。
