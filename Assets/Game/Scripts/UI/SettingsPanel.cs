@@ -63,7 +63,7 @@ public sealed class SettingsPanel : UIPanel
         BuildResolutions();
         SelectPage(0);
         Refresh();
-        status.text = "Shared by title and farm. Apply saves; Back discards changes.";
+        status.text = "点击“应用”保存设置，点击“返回”放弃修改。";
     }
 
     public override void OnClose()
@@ -96,14 +96,14 @@ public sealed class SettingsPanel : UIPanel
             Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;
         if (confirming)
         {
-            countdown.text = "Keep these display settings?\nReverting in " +
-                Mathf.CeilToInt(Mathf.Max(0f, confirmationDeadline - Time.unscaledTime)) + " seconds";
+            countdown.text = "保留新的显示设置？\n将在 " +
+                Mathf.CeilToInt(Mathf.Max(0f, confirmationDeadline - Time.unscaledTime)) + " 秒后恢复原设置";
             if (back || Time.unscaledTime >= confirmationDeadline) RevertDisplay();
             return;
         }
         if (bindingIndex >= 0)
         {
-            if (back) { bindingIndex = -1; Refresh(); status.text = "Key change cancelled."; return; }
+            if (back) { bindingIndex = -1; Refresh(); status.text = "已取消修改按键。"; return; }
             if (keyboard != null)
                 foreach (var key in keyboard.allKeys)
                     if (key != null && key.wasPressedThisFrame) { TryBindKey(key.keyCode); break; }
@@ -156,7 +156,7 @@ public sealed class SettingsPanel : UIPanel
             rows[11 + i].Bind(step =>
             {
                 bindingIndex = index;
-                status.text = "Press a letter (A-Z). Escape cancels. Arrow keys stay available.";
+                status.text = "请按一个字母键，Esc 取消。方向键始终可用。";
                 Refresh();
             }, null);
         }
@@ -166,33 +166,33 @@ public sealed class SettingsPanel : UIPanel
     {
         service.Preview(draft);
         Refresh();
-        status.text = "Previewing changes. Apply to save; Back to discard.";
+        status.text = "正在预览。点击“应用”保存，“返回”取消。";
     }
 
     private void Refresh()
     {
-        rows[0].Refresh(new[] { "Windowed", "Borderless", "Fullscreen" }[draft.windowMode]);
-        rows[1].Refresh(draft.resolutionWidth == 0 ? "Desktop" : draft.resolutionWidth + " x " + draft.resolutionHeight);
+        rows[0].Refresh(new[] { "窗口", "无边框窗口", "全屏" }[draft.windowMode]);
+        rows[1].Refresh(draft.resolutionWidth == 0 ? "桌面分辨率" : draft.resolutionWidth + " x " + draft.resolutionHeight);
         rows[2].Refresh(OnOff(draft.vSync));
-        rows[3].Refresh(draft.vSync ? "VSync controlled" : draft.frameRate < 0 ? "Unlimited" : draft.frameRate + " FPS", 0f, !draft.vSync);
+        rows[3].Refresh(draft.vSync ? "由垂直同步控制" : draft.frameRate < 0 ? "不限制" : draft.frameRate + " 帧/秒", 0f, !draft.vSync);
         rows[4].Refresh(Percent(draft.masterVolume), draft.masterVolume * 100f);
         rows[5].Refresh(OnOff(draft.muteWhenUnfocused));
         rows[6].Refresh(Percent(draft.uiScale), draft.uiScale * 100f);
         rows[7].Refresh(Percent(draft.worldZoom), draft.worldZoom * 100f);
-        rows[8].Refresh(draft.clock24Hour ? "24 hour" : "12 hour");
+        rows[8].Refresh(draft.clock24Hour ? "24 小时制" : "12 小时制");
         rows[9].Refresh(OnOff(draft.showControlHints));
         rows[10].Refresh(OnOff(draft.pauseWhenUnfocused));
         int[] keys = GetKeys();
-        for (int i = 0; i < keys.Length; i++) rows[11 + i].Refresh(bindingIndex == i ? "Press a key..." : ((Key)keys[i]).ToString());
+        for (int i = 0; i < keys.Length; i++) rows[11 + i].Refresh(bindingIndex == i ? "请按下按键…" : ((Key)keys[i]).ToString());
         RefreshNavigation();
     }
 
     private void TryBindKey(Key key)
     {
-        if (!GameSettings.IsBindableKey(key)) { status.text = "Choose a letter (A-Z); Escape cancels."; return; }
+        if (!GameSettings.IsBindableKey(key)) { status.text = "请选择字母键，Esc 取消。"; return; }
         int[] keys = GetKeys();
         for (int i = 0; i < keys.Length; i++)
-            if (i != bindingIndex && keys[i] == (int)key) { status.text = key + " is already assigned. Choose another key."; return; }
+            if (i != bindingIndex && keys[i] == (int)key) { status.text = key + " 已被占用，请选择其他按键。"; return; }
         switch (bindingIndex)
         {
             case 0: draft.moveUp = (int)key; break;
@@ -206,7 +206,7 @@ public sealed class SettingsPanel : UIPanel
     }
 
     private int[] GetKeys() => new[] { draft.moveUp, draft.moveDown, draft.moveLeft, draft.moveRight, draft.backpackKey };
-    private static string OnOff(bool value) => value ? "On" : "Off";
+    private static string OnOff(bool value) => value ? "开启" : "关闭";
     private static string Percent(float value) => Mathf.RoundToInt(value * 100f) + "%";
 
     private void BuildResolutions()
@@ -251,7 +251,7 @@ public sealed class SettingsPanel : UIPanel
     {
         service.Commit(draft);
         original = service.Snapshot;
-        status.text = "Settings saved on this device.";
+        status.text = "设置已保存。";
     }
 
     private void KeepDisplay()
@@ -274,7 +274,7 @@ public sealed class SettingsPanel : UIPanel
         draft = original.Copy();
         service.Preview(draft);
         Refresh();
-        status.text = "Display change cancelled. Previous settings restored.";
+        status.text = "已取消显示修改，恢复原设置。";
         applyButton.Select();
     }
 
@@ -284,7 +284,7 @@ public sealed class SettingsPanel : UIPanel
         bindingIndex = -1;
         draft = new GameSettings();
         Changed();
-        status.text = "Default settings previewed. Apply to save; Back to undo.";
+        status.text = "已预览默认设置，点击“应用”保存。";
     }
 
     private void Back()

@@ -68,17 +68,17 @@ public sealed class GameDataTests
     }
 
     [Test]
-    public void CharacterNameGenerator_UsesOnlyConfiguredEnglishNames()
+    public void CharacterNameGenerator_UsesConfiguredChineseNames()
     {
         CharacterNameDatabase database = AssetDatabase.LoadAssetAtPath<CharacterNameDatabase>(
             "Assets/Game/Data/Catalogs/CharacterNameDatabase.asset");
         Assert.That(database, Is.Not.Null);
-        Assert.That(database.DefaultLocaleCode, Is.EqualTo("en").IgnoreCase);
+        Assert.That(database.DefaultLocaleCode, Is.EqualTo("zh-CN").IgnoreCase);
 
-        CharacterNameDatabase.NamePool pool = database.FindPool("en");
+        CharacterNameDatabase.NamePool pool = database.FindPool("zh-CN");
         Assert.That(pool, Is.Not.Null);
         var expected = new HashSet<string>(pool.Names);
         for (int i = 0; i < 32; i++)
-            Assert.That(expected.Contains(CharacterNameGenerator.GetRandomName(database, "en")), Is.True);
+            Assert.That(expected.Contains(CharacterNameGenerator.GetRandomName(database, "zh-CN")), Is.True);
     }
 }

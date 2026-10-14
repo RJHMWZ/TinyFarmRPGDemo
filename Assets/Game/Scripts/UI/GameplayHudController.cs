@@ -129,10 +129,10 @@ public sealed class GameplayHudController : MonoBehaviour
         moneyText = CozyUi.Text(moneyCard, "Money", "", 30f, TextAlignmentOptions.Center, CozyUi.Ink,
             Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-20f, -8f));
 
-        CozyUi.Button(hudLayer, "BackpackButton", "BACKPACK  [I]", Vector2.up, Vector2.up, Vector2.up,
+        CozyUi.Button(hudLayer, "BackpackButton", "背包  [I]", Vector2.up, Vector2.up, Vector2.up,
             new Vector2(28f, -28f), new Vector2(290f, 68f), OpenBackpack, out TextMeshProUGUI backpackLabel);
         backpackButtonLabel = backpackLabel;
-        CozyUi.Button(hudLayer, "MenuButton", "MENU  [ESC]", Vector2.up, Vector2.up, Vector2.up,
+        CozyUi.Button(hudLayer, "MenuButton", "菜单  [Esc]", Vector2.up, Vector2.up, Vector2.up,
             new Vector2(28f, -112f), new Vector2(290f, 68f), OpenSystemMenu, out TextMeshProUGUI menuLabel);
         menuButtonLabel = menuLabel;
 
@@ -143,19 +143,19 @@ public sealed class GameplayHudController : MonoBehaviour
             Vector2.zero, Vector2.one, Vector2.one * 0.5f, Vector2.zero, new Vector2(-16f, -8f));
 
         RectTransform objectiveCard = CozyUi.Rect(hudLayer, "FirstDayObjective", Vector2.up, Vector2.up, Vector2.up,
-            new Vector2(28f, -298f), new Vector2(490f, 176f));
+            new Vector2(28f, -298f), new Vector2(490f, 214f));
         tutorialCard = objectiveCard.gameObject;
         CozyUi.Panel(objectiveCard, new Color(0.96f, 0.91f, 0.72f, 0.96f));
-        tutorialHeader = CozyUi.Text(objectiveCard, "Step", "", 18f, TextAlignmentOptions.Left, CozyUi.Leaf,
+        tutorialHeader = CozyUi.Text(objectiveCard, "Step", "", 22f, TextAlignmentOptions.Left, CozyUi.Leaf,
             Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -14f), new Vector2(-44f, 30f));
-        tutorialTitle = CozyUi.Text(objectiveCard, "Objective", "", 27f, TextAlignmentOptions.Left, CozyUi.Ink,
+        tutorialTitle = CozyUi.Text(objectiveCard, "Objective", "", 30f, TextAlignmentOptions.Left, CozyUi.Ink,
             Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -47f), new Vector2(-44f, 42f));
-        tutorialInstruction = CozyUi.Text(objectiveCard, "Instruction", "", 20f, TextAlignmentOptions.TopLeft, CozyUi.Ink,
-            Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -91f), new Vector2(-44f, 68f));
+        tutorialInstruction = CozyUi.Text(objectiveCard, "Instruction", "", 26f, TextAlignmentOptions.TopLeft, CozyUi.Ink,
+            Vector2.up, Vector2.one, Vector2.up, new Vector2(22f, -96f), new Vector2(-44f, 100f));
         RectTransform hintCard = CozyUi.Rect(hudLayer, "InteractionHint", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
             new Vector2(0.5f, 0f), new Vector2(0, 146f), new Vector2(940f, 54f));
         CozyUi.Panel(hintCard, new Color(0.15f, 0.21f, 0.13f, 0.9f), false).raycastTarget = false;
-        interactionText = CozyUi.Text(hintCard, "Hint", "", 22f, TextAlignmentOptions.Center, CozyUi.Cream,
+        interactionText = CozyUi.Text(hintCard, "Hint", "", 26f, TextAlignmentOptions.Center, CozyUi.Cream,
             Vector2.zero, Vector2.one, Vector2.one * 0.5f, Vector2.zero, new Vector2(-16, -4));
 
         RectTransform hotbar = CozyUi.Rect(hudLayer, "Hotbar", new Vector2(0.5f, 0f),
@@ -168,7 +168,7 @@ public sealed class GameplayHudController : MonoBehaviour
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(-454f + i * 82.5f, 0f), new Vector2(72f, 72f),
                 () => SelectHotbarSlot(slotIndex), out TextMeshProUGUI label);
-            label.fontSize = 14f;
+            label.fontSize = 20f;
             label.enableWordWrapping = false;
             label.alignment = TextAlignmentOptions.TopLeft;
             label.margin = new Vector4(7f, 4f, 0f, 0f);
@@ -177,7 +177,7 @@ public sealed class GameplayHudController : MonoBehaviour
             Image itemIcon = iconRect.gameObject.AddComponent<Image>();
             itemIcon.preserveAspect = true;
             itemIcon.raycastTarget = false;
-            TMP_Text countLabel = CozyUi.Text(button.transform, "Count", "", 13f,
+            TMP_Text countLabel = CozyUi.Text(button.transform, "Count", "", 20f,
                 TextAlignmentOptions.BottomRight, CozyUi.Cream, Vector2.zero, Vector2.one,
                 Vector2.one * 0.5f, Vector2.zero, new Vector2(-10f, -8f));
             countLabel.fontStyle = FontStyles.Bold;
@@ -192,12 +192,12 @@ public sealed class GameplayHudController : MonoBehaviour
     {
         if (save == null) return;
         dateText.text = GameCalendar.SeasonName(save.world.season) + "  " + save.world.day +
-                        "   Year " + save.world.year + "   -   " + WeatherName(save.world.weatherId);
+                        " 日　第 " + save.world.year + " 年　·　" + WeatherName(save.world.weatherId);
         clockText.text = preferences != null && preferences.clock24Hour
             ? save.world.hour.ToString("00") + ":" + save.world.minute.ToString("00")
-            : ((save.world.hour + 11) % 12 + 1) + ":" + save.world.minute.ToString("00") + (save.world.hour < 12 ? " AM" : " PM");
-        moneyText.text = "GOLD   " + save.player.money.ToString("N0") + " g";
-        if (energyText != null) energyText.text = "ENERGY  " + save.farm.energy + "/100\nFarming Lv." + (farm != null ? farm.Game.Progression.Level : 1);
+            : ((save.world.hour + 11) % 12 + 1) + ":" + save.world.minute.ToString("00") + (save.world.hour < 12 ? " 上午" : " 下午");
+        moneyText.text = "金币　" + save.player.money.ToString("N0");
+        if (energyText != null) energyText.text = "体力　" + save.farm.energy + "/100\n农场等级 " + (farm != null ? farm.Game.Progression.Level : 1);
         if (interactionText != null) interactionText.text = preferences != null && !preferences.showControlHints ? "" : farm != null ? farm.InteractionHint : "";
         if (tutorialCard != null && farm != null)
         {
@@ -206,7 +206,7 @@ public sealed class GameplayHudController : MonoBehaviour
             if (!tutorial.IsComplete)
             {
                 TutorialObjective objective = tutorial.Objective;
-                tutorialHeader.text = "FIRST DAY  " + tutorial.DisplayStep + "/" + FirstDayTutorial.ObjectiveCount +
+                tutorialHeader.text = "新手引导　" + tutorial.DisplayStep + "/" + FirstDayTutorial.ObjectiveCount +
                     "     " + Mathf.Min(objective.Progress, objective.Target) + "/" + objective.Target;
                 tutorialTitle.text = objective.Title;
                 tutorialInstruction.text = objective.Instruction;
@@ -244,16 +244,16 @@ public sealed class GameplayHudController : MonoBehaviour
         RectTransform card = CozyUi.Rect(root.transform, "Card", new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(570f, 760f));
         CozyUi.Panel(card, CozyUi.Cream);
-        CozyUi.Text(card, "Title", "FARM MENU", 44f, TextAlignmentOptions.Center, CozyUi.Ink,
+        CozyUi.Text(card, "Title", "农场菜单", 44f, TextAlignmentOptions.Center, CozyUi.Ink,
             new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, -38f), new Vector2(480f, 70f));
-        AddMenuButton(card, "Resume", "RESUME", -145f, CloseModal);
-        AddMenuButton(card, "Save", "SAVE GAME", -235f, SaveNow);
-        AddMenuButton(card, "Backpack", "BACKPACK", -325f, () => { CloseModal(); OpenBackpack(); });
-        AddMenuButton(card, "Settings", "SETTINGS", -415f, OpenSettings);
-        AddMenuButton(card, "TitleScreen", "SAVE & TITLE", -505f, () => ConfirmExit(false));
-        AddMenuButton(card, "Quit", "SAVE & QUIT", -595f, () => ConfirmExit(true));
-        CozyUi.Text(card, "Hint", "Esc closes this menu", 20f, TextAlignmentOptions.Center,
+        AddMenuButton(card, "Resume", "继续游戏", -145f, CloseModal);
+        AddMenuButton(card, "Save", "保存游戏", -235f, SaveNow);
+        AddMenuButton(card, "Backpack", "背包", -325f, () => { CloseModal(); OpenBackpack(); });
+        AddMenuButton(card, "Settings", "设置", -415f, OpenSettings);
+        AddMenuButton(card, "TitleScreen", "保存并返回标题", -505f, () => ConfirmExit(false));
+        AddMenuButton(card, "Quit", "保存并退出", -595f, () => ConfirmExit(true));
+        CozyUi.Text(card, "Hint", "按 Esc 返回游戏", 20f, TextAlignmentOptions.Center,
             new Color32(105, 82, 62, 255), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
             new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(460f, 36f));
         SetModal(root);
@@ -277,16 +277,16 @@ public sealed class GameplayHudController : MonoBehaviour
         RectTransform card = CozyUi.Rect(root.transform, "Card", Vector2.one * 0.5f, Vector2.one * 0.5f,
             Vector2.one * 0.5f, Vector2.zero, new Vector2(760f, 380f));
         CozyUi.Panel(card, CozyUi.Cream);
-        CozyUi.Text(card, "Title", quit ? "SAVE & QUIT?" : "RETURN TO TITLE?", 36f,
+        CozyUi.Text(card, "Title", quit ? "保存并退出？" : "返回标题界面？", 36f,
             TextAlignmentOptions.Center, CozyUi.Ink, Vector2.up, Vector2.one, Vector2.one * 0.5f,
             new Vector2(0f, -72f), new Vector2(-60f, 65f));
-        CozyUi.Text(card, "Hint", "Your farm will be saved before leaving.\nIf saving fails, you will stay here.", 25f,
+        CozyUi.Text(card, "Hint", "离开前会保存农场进度。\n保存失败时将保留当前游戏。", 25f,
             TextAlignmentOptions.Center, CozyUi.Ink, Vector2.one * 0.5f, Vector2.one * 0.5f,
             Vector2.one * 0.5f, Vector2.zero, new Vector2(680f, 100f));
-        CozyUi.Button(card, "CancelExit", "CANCEL", Vector2.zero, Vector2.zero, Vector2.zero,
+        CozyUi.Button(card, "CancelExit", "取消", Vector2.zero, Vector2.zero, Vector2.zero,
             new Vector2(42f, 40f), new Vector2(310f, 62f),
             () => { ReplaceModal(null); OpenSystemMenu(); }, out _);
-        CozyUi.Button(card, "ConfirmExit", quit ? "SAVE & QUIT" : "SAVE & TITLE", Vector2.right,
+        CozyUi.Button(card, "ConfirmExit", quit ? "保存并退出" : "保存并返回标题", Vector2.right,
             Vector2.right, Vector2.right, new Vector2(-42f, 40f), new Vector2(310f, 62f),
             () => { if (quit) SaveAndQuit(); else SaveAndReturnToTitle(); }, out _);
         SetModal(root);
@@ -346,7 +346,7 @@ public sealed class GameplayHudController : MonoBehaviour
         }
         save.world.currentScene = SceneManager.GetActiveScene().name;
         bool saved = root.Saves.Save(root.Session.ActiveSlot, save);
-        ShowToast(saved ? "Game saved." : "Save failed. Check the log.");
+        ShowToast(saved ? "游戏已保存。" : "保存失败，请查看日志。");
         return saved;
     }
 
@@ -407,8 +407,8 @@ public sealed class GameplayHudController : MonoBehaviour
         if (hudLayer == null || clockText == null) return;
         preferences = settings.Snapshot;
         foreach (Transform child in hudLayer) child.localScale = Vector3.one * preferences.uiScale;
-        backpackButtonLabel.text = "BACKPACK" + (preferences.showControlHints ? "  [" + (Key)preferences.backpackKey + "]" : "");
-        menuButtonLabel.text = "MENU" + (preferences.showControlHints ? "  [ESC]" : "");
+        backpackButtonLabel.text = "背包" + (preferences.showControlHints ? "  [" + (Key)preferences.backpackKey + "]" : "");
+        menuButtonLabel.text = "菜单" + (preferences.showControlHints ? "  [ESC]" : "");
         if (worldCamera != null && worldCamera.orthographic)
             worldCamera.orthographicSize = baseCameraSize / preferences.worldZoom;
         RefreshHud();
@@ -416,8 +416,8 @@ public sealed class GameplayHudController : MonoBehaviour
 
     private static string WeatherName(string weatherId)
     {
-        if (string.IsNullOrWhiteSpace(weatherId)) return "Sunny";
-        return char.ToUpperInvariant(weatherId[0]) + weatherId.Substring(1);
+        if (string.IsNullOrWhiteSpace(weatherId)) return "晴天";
+        return weatherId == "rainy" || weatherId == "rain" ? "雨天" : weatherId == "snowy" || weatherId == "snow" ? "雪天" : weatherId == "cloudy" ? "多云" : "晴天";
     }
 
     private static string HotbarKeyName(int index)

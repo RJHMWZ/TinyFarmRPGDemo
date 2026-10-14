@@ -5474,8 +5474,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   items:
   - id: hoe
-    title: Hoe
-    description: Till empty farm plots.
+    title: "锄头"
+    description: "用于耕开空地，为播种做准备。"
     kind: 1
     maxStack: 1
     buyPrice: 0
@@ -5483,8 +5483,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: 2425201419599860836}
   - id: watering-can
-    title: Watering Can
-    description: Water tilled soil. Crops grow only after watered days.
+    title: "水壶"
+    description: "给耕地浇水，作物只有在浇水后才会生长。"
     kind: 1
     maxStack: 1
     buyPrice: 0
@@ -5492,8 +5492,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: 8693051672646481923}
   - id: axe
-    title: Axe
-    description: Gather wood from trees.
+    title: "斧头"
+    description: "砍伐树木，收集木材。"
     kind: 1
     maxStack: 1
     buyPrice: 0
@@ -5501,8 +5501,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: 3752945366116924529}
   - id: pickaxe
-    title: Pickaxe
-    description: Gather stone or clear empty tilled plots.
+    title: "镐"
+    description: "采集石头，或清除空耕地。"
     kind: 1
     maxStack: 1
     buyPrice: 0
@@ -5510,8 +5510,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -4094822579522194768}
   - id: wood
-    title: Wood
-    description: Construction and crafting material.
+    title: "木材"
+    description: "用于建设和制作物品。"
     kind: 0
     maxStack: 99
     buyPrice: 0
@@ -5519,8 +5519,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: 1803773302625891225}
   - id: stone
-    title: Stone
-    description: Useful for sprinklers and tools.
+    title: "石头"
+    description: "用于制作洒水器和工具。"
     kind: 0
     maxStack: 99
     buyPrice: 0
@@ -5528,8 +5528,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -686200408673279833}
   - id: berry
-    title: Wild Berries
-    description: Eat to restore 15 energy or give as a gift.
+    title: "野生浆果"
+    description: "食用恢复 15 体力，也可以送给村民。"
     kind: 4
     maxStack: 99
     buyPrice: 25
@@ -5537,8 +5537,8 @@ MonoBehaviour:
     energy: 15
     icon: {fileID: -2332639273811530263}
   - id: salad
-    title: Farm Salad
-    description: A fresh meal. Restores 45 energy.
+    title: "农场沙拉"
+    description: "新鲜的沙拉，食用恢复 45 体力。"
     kind: 4
     maxStack: 99
     buyPrice: 90
@@ -5546,8 +5546,8 @@ MonoBehaviour:
     energy: 45
     icon: {fileID: -3515707382800181222}
   - id: fertilizer
-    title: Fertilizer
-    description: Apply before planting for one extra crop per harvest.
+    title: "肥料"
+    description: "播种前施肥，每次收获增加一个产物。"
     kind: 0
     maxStack: 99
     buyPrice: 35
@@ -5555,8 +5555,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -4236723081734560710}
   - id: sprinkler
-    title: Sprinkler
-    description: Waters its plot and four adjacent plots every morning.
+    title: "洒水器"
+    description: "每天早上浇灌自身和上下左右的四格农田。"
     kind: 5
     maxStack: 99
     buyPrice: 250
@@ -5564,8 +5564,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -4065433024354469289}
   - id: parsnip-seed
-    title: Parsnip Seeds
-    description: 4 watered days. Spring crop.
+    title: "防风草种子"
+    description: "4 天浇水后成熟。春季作物。"
     kind: 2
     maxStack: 99
     buyPrice: 20
@@ -5573,8 +5573,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: 54039569429694503}
   - id: parsnip
-    title: Parsnip
-    description: Fresh produce. Ship for gold, cook, eat or give as a gift.
+    title: "防风草"
+    description: "新鲜农产品，可以出售、制作食物或送礼。"
     kind: 3
     maxStack: 99
     buyPrice: 0
@@ -5582,8 +5582,8 @@ MonoBehaviour:
     energy: 8
     icon: {fileID: 2683043558726680962}
   - id: potato-seed
-    title: Potato Seeds
-    description: 5 watered days. Spring crop.
+    title: "土豆种子"
+    description: "5 天浇水后成熟。春季作物。"
     kind: 2
     maxStack: 99
     buyPrice: 35
@@ -5591,8 +5591,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -4544487154322244647}
   - id: potato
-    title: Potato
-    description: Fresh produce. Ship for gold, cook, eat or give as a gift.
+    title: "土豆"
+    description: "新鲜农产品，可以出售、制作食物或送礼。"
     kind: 3
     maxStack: 99
     buyPrice: 0
@@ -5600,8 +5600,8 @@ MonoBehaviour:
     energy: 8
     icon: {fileID: -3872942902101710660}
   - id: tomato-seed
-    title: Tomato Seeds
-    description: 5 watered days. Summer crop.
+    title: "番茄种子"
+    description: "5 天浇水后成熟。夏季作物。"
     kind: 2
     maxStack: 99
     buyPrice: 40
@@ -5609,8 +5609,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -5483838521766647702}
   - id: tomato
-    title: Tomato
-    description: Fresh produce. Ship for gold, cook, eat or give as a gift.
+    title: "番茄"
+    description: "新鲜农产品，可以出售、制作食物或送礼。"
     kind: 3
     maxStack: 99
     buyPrice: 0
@@ -5618,8 +5618,8 @@ MonoBehaviour:
     energy: 8
     icon: {fileID: 7911347492189847823}
   - id: pumpkin-seed
-    title: Pumpkin Seeds
-    description: 7 watered days. Fall crop.
+    title: "南瓜种子"
+    description: "7 天浇水后成熟。秋季作物。"
     kind: 2
     maxStack: 99
     buyPrice: 70
@@ -5627,8 +5627,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -3956556510560237765}
   - id: pumpkin
-    title: Pumpkin
-    description: Fresh produce. Ship for gold, cook, eat or give as a gift.
+    title: "南瓜"
+    description: "新鲜农产品，可以出售、制作食物或送礼。"
     kind: 3
     maxStack: 99
     buyPrice: 0
@@ -5636,8 +5636,8 @@ MonoBehaviour:
     energy: 8
     icon: {fileID: -4580881527540884022}
   - id: carrot-seed
-    title: Carrot Seeds
-    description: 4 watered days. All seasons.
+    title: "胡萝卜种子"
+    description: "4 天浇水后成熟。四季可种。"
     kind: 2
     maxStack: 99
     buyPrice: 25
@@ -5645,8 +5645,8 @@ MonoBehaviour:
     energy: 0
     icon: {fileID: -3447407863219583887}
   - id: carrot
-    title: Carrot
-    description: Fresh produce. Ship for gold, cook, eat or give as a gift.
+    title: "胡萝卜"
+    description: "新鲜农产品，可以出售、制作食物或送礼。"
     kind: 3
     maxStack: 99
     buyPrice: 0
@@ -5720,7 +5720,7 @@ MonoBehaviour:
     - {fileID: 6727150476585922180}
   recipes:
   - id: fertilizer
-    title: Fertilizer
+    title: "肥料"
     outputId: fertilizer
     outputCount: 2
     requiredLevel: 1
@@ -5730,7 +5730,7 @@ MonoBehaviour:
     - itemId: stone
       count: 2
   - id: salad
-    title: Farm Salad
+    title: "农场沙拉"
     outputId: salad
     outputCount: 1
     requiredLevel: 1
@@ -5740,7 +5740,7 @@ MonoBehaviour:
     - itemId: berry
       count: 2
   - id: sprinkler
-    title: Sprinkler
+    title: "洒水器"
     outputId: sprinkler
     outputCount: 1
     requiredLevel: 2
@@ -5750,7 +5750,7 @@ MonoBehaviour:
     - itemId: stone
       count: 10
   - id: seed-pouch
-    title: Carrot Seed Pouch
+    title: "胡萝卜种子包"
     outputId: carrot-seed
     outputCount: 3
     requiredLevel: 2
@@ -5761,80 +5761,80 @@ MonoBehaviour:
       count: 2
   quests:
   - id: first-soil
-    title: A Fresh Start
-    description: Till five plots with your hoe.
+    title: "新的开始"
+    description: "用锄头耕出 5 块土地。"
     prerequisite: 
     counter: till
     target: 5
     goldReward: 80
     experienceReward: 20
   - id: first-seeds
-    title: Seeds of Tomorrow
-    description: Plant five seeds.
+    title: "播下希望"
+    description: "播下 5 颗种子。"
     prerequisite: first-soil
     counter: plant
     target: 5
     goldReward: 100
     experienceReward: 20
   - id: first-water
-    title: A Little Care
-    description: Water five plots.
+    title: "悉心照料"
+    description: "给 5 块农田浇水。"
     prerequisite: first-seeds
     counter: water
     target: 5
     goldReward: 60
     experienceReward: 20
   - id: neighbors
-    title: Meet the Neighbors
-    description: Talk to villagers on three occasions.
+    title: "认识邻居"
+    description: "与村民聊天 3 次。"
     prerequisite: 
     counter: talk
     target: 3
     goldReward: 90
     experienceReward: 30
   - id: gatherer
-    title: Gather the Basics
-    description: Gather from five resource nodes.
+    title: "收集基础材料"
+    description: "采集资源 5 次。"
     prerequisite: 
     counter: gather
     target: 5
     goldReward: 100
     experienceReward: 40
   - id: first-harvest
-    title: First Harvest
-    description: Harvest five crops.
+    title: "第一次收获"
+    description: "收获 5 个作物。"
     prerequisite: first-water
     counter: harvest
     target: 5
     goldReward: 150
     experienceReward: 50
   - id: first-shipping
-    title: From Farm to Market
-    description: Ship five items using the shipping bin.
+    title: "从农场到集市"
+    description: "通过出货箱出售 5 个物品。"
     prerequisite: first-harvest
     counter: ship
     target: 5
     goldReward: 120
     experienceReward: 40
   - id: maker
-    title: Made by Hand
-    description: Craft three items.
+    title: "亲手制作"
+    description: "制作物品 3 次。"
     prerequisite: gatherer
     counter: craft
     target: 3
     goldReward: 150
     experienceReward: 50
   - id: friend
-    title: A Thoughtful Gift
-    description: Give three gifts to your neighbors.
+    title: "一份心意"
+    description: "给村民送礼 3 次。"
     prerequisite: neighbors
     counter: gift
     target: 3
     goldReward: 120
     experienceReward: 40
   - id: prosperity
-    title: Growing Together
-    description: Earn 1000 gold from shipping.
+    title: "农场成长"
+    description: "通过出货累计赚取 1000 金币。"
     prerequisite: first-shipping
     counter: earn
     target: 1000
@@ -5842,12 +5842,12 @@ MonoBehaviour:
     experienceReward: 100
   villagers:
   - id: willow
-    title: Willow
+    title: "薇洛"
     favoriteItem: parsnip
     dialogue:
-    - Welcome! Start with a few watered plots. A small farm can do great things.
-    - Leave room in your backpack before harvesting. Your crops can wait safely.
-    - Rain is a farmer's best helper. Use the extra time to gather materials.
+    - "欢迎！先种几块地并浇好水，小农场也会有大收获。"
+    - "收获前记得给背包留点空间。成熟的作物可以安心留在地里。"
+    - "雨水是农夫的好帮手，下雨时可以多去收集些材料。"
     portrait: {fileID: 0}
     layers:
     - {fileID: -4921510441440489021}
@@ -5855,12 +5855,12 @@ MonoBehaviour:
     - {fileID: 1268600633940218485}
     - {fileID: 5687511619152217295}
   - id: rowan
-    title: Rowan
+    title: "罗恩"
     favoriteItem: berry
     dialogue:
-    - Wood and stone regrow in two days around here. Take only what you need.
-    - A sprinkler waters its own plot and the four plots around it each morning.
-    - Gifts are lovely, but a friendly conversation matters just as much.
+    - "附近的木材和石头两天后就会恢复，按需采集就好。"
+    - "洒水器每天早上都会浇灌自身和周围四格农田。"
+    - "礼物让人开心，友好的聊天也同样重要。"
     portrait: {fileID: 0}
     layers:
     - {fileID: 3430542140596343201}

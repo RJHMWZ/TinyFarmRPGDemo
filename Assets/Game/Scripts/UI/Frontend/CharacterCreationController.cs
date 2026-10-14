@@ -109,7 +109,7 @@ public sealed class CharacterCreationController : MonoBehaviour
             return;
         }
         if (nameDatabase == null)
-            Debug.LogWarning("CharacterNameDatabase is missing. English fallback name 'Player' will be used.", this);
+            Debug.LogWarning("CharacterNameDatabase is missing. Chinese fallback name will be used.", this);
 
         profile = new CharacterCreationProfile();
         if (string.IsNullOrWhiteSpace(profile.playerName)) profile.playerName = GenerateRandomName();
@@ -187,8 +187,8 @@ public sealed class CharacterCreationController : MonoBehaviour
 
     private string GenerateRandomName()
     {
-        string generatedName = CharacterNameGenerator.GetRandomName(nameDatabase, "en");
-        return string.IsNullOrEmpty(generatedName) ? "Player" : generatedName;
+        string generatedName = CharacterNameGenerator.GetRandomName(nameDatabase, nameDatabase != null ? nameDatabase.DefaultLocaleCode : "zh-CN");
+        return string.IsNullOrEmpty(generatedName) ? "小农夫" : generatedName;
     }
 
     private void Confirm()

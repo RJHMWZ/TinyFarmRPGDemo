@@ -4,7 +4,7 @@ using System;
 public static class GameCalendar
 {
     public const int DaysPerSeason = 28;
-    public static readonly string[] SeasonNames = { "Spring", "Summer", "Fall", "Winter" };
+    public static readonly string[] SeasonNames = { "春季", "夏季", "秋季", "冬季" };
 
     public static bool AdvanceMinutes(WorldSaveData world, int minutes)
     {

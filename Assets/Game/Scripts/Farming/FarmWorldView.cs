@@ -66,21 +66,21 @@ public sealed class FarmWorldView : MonoBehaviour
         Draw("PondEdge", new Vector2(-9f, 5.5f), null, new Color(0.81f, 0.75f, 0.51f), new Vector2(6.5f, 4.5f), -940);
         Draw("Pond", new Vector2(-9f, 5.5f), null, new Color(0.29f, 0.62f, 0.72f), new Vector2(6f, 4f), -930);
         Collider("PondCollision", new Vector2(-9f, 5.5f), new Vector2(6f, 4f));
-        Label("WILLOW FARM", new Vector2(3.5f, 7.5f), 3f);
-        Label("FIELD", new Vector2(4.5f, -4.8f), 1.7f);
+        Label("柳叶农场", new Vector2(3.5f, 7.5f), 3f);
+        Label("农田", new Vector2(4.5f, -4.8f), 1.7f);
         for (int i = 0; i < FarmSaveData.Width * FarmSaveData.Height; i++)
         {
             Vector2 position = PlotPosition(i);
             soil.Add(Draw("Plot_" + i, position, content.soil, Color.white, Vector2.one * 0.94f, -800));
             crops.Add(Draw("Crop_" + i, position + Vector2.up * 0.13f, null, Color.clear, Vector2.one * 0.8f, Depth(position.y)));
             sprinklers.Add(Draw("Sprinkler_" + i, position + new Vector2(0.32f, -0.28f), content.Item("sprinkler")?.icon, Color.clear, Vector2.one * 0.22f, Depth(position.y) + 1));
-            Targets.Add(new FarmWorldTarget { Position = position, Id = "plot-" + i, Kind = "plot", Title = "Farm plot", PlotIndex = i });
+            Targets.Add(new FarmWorldTarget { Position = position, Id = "plot-" + i, Kind = "plot", Title = "农田", PlotIndex = i });
         }
-        Station("home", "sleep", "HOME / SLEEP", new Vector2(-4, 4.4f), content.bed, new Color(0.82f, 0.58f, 0.43f));
-        Station("shop", "shop", "SEED SHOP", new Vector2(0.2f, 5f), content.workbench, new Color(0.95f, 0.75f, 0.38f));
-        Station("shipping", "shipping", "SHIPPING", new Vector2(3f, 5f), content.chest, new Color(0.85f, 0.67f, 0.4f));
-        Station("storage", "storage", "STORAGE", new Vector2(5.8f, 5f), content.chest, new Color(0.63f, 0.76f, 0.93f));
-        Station("crafting", "crafting", "WORKBENCH", new Vector2(8.6f, 5f), content.workbench, Color.white);
+        Station("home", "sleep", "住宅 · 睡觉", new Vector2(-4, 4.4f), content.bed, new Color(0.82f, 0.58f, 0.43f));
+        Station("shop", "shop", "种子商店", new Vector2(0.2f, 5f), content.workbench, new Color(0.95f, 0.75f, 0.38f));
+        Station("shipping", "shipping", "出货箱", new Vector2(3f, 5f), content.chest, new Color(0.85f, 0.67f, 0.4f));
+        Station("storage", "storage", "仓库", new Vector2(5.8f, 5f), content.chest, new Color(0.63f, 0.76f, 0.93f));
+        Station("crafting", "crafting", "工作台", new Vector2(8.6f, 5f), content.workbench, Color.white);
         for (int i = 0; i < content.villagers.Length; i++)
         {
             FarmNpc npc = content.villagers[i];
@@ -95,9 +95,9 @@ public sealed class FarmWorldView : MonoBehaviour
         {
             Vector2 position = new Vector2(-10.5f + (i % 3) * 2.4f, -3f - (i / 3) * 3f);
             string kind = i < 3 ? "wood" : "stone";
-            Station(kind + i, kind, i < 3 ? "TREE" : "ROCK", position, i < 3 ? content.tree : content.rock, Color.white);
+            Station(kind + i, kind, i < 3 ? "树木" : "石头", position, i < 3 ? content.tree : content.rock, Color.white);
         }
-        Station("berry0", "berry", "BERRIES", new Vector2(10.5f, -2f), content.Item("berry")?.icon, Color.white);
+        Station("berry0", "berry", "浆果", new Vector2(10.5f, -2f), content.Item("berry")?.icon, Color.white);
         Collider("NorthFence", new Vector2(0, 9.5f), new Vector2(28, 1));
         Collider("SouthFence", new Vector2(0, -9.5f), new Vector2(28, 1));
         Collider("WestFence", new Vector2(-13.5f, 0), new Vector2(1, 20));
@@ -137,7 +137,7 @@ public sealed class FarmWorldView : MonoBehaviour
             soil.Add(Draw("Plot_" + i, position, content.soil, Color.white, Vector2.one * 0.94f, -800));
             crops.Add(Draw("Crop_" + i, position + Vector2.up * 0.13f, null, Color.clear, Vector2.one * 0.8f, Depth(position.y)));
             sprinklers.Add(Draw("Sprinkler_" + i, position + new Vector2(0.32f, -0.28f), content.Item("sprinkler")?.icon, Color.clear, Vector2.one * 0.22f, Depth(position.y) + 1));
-            Targets.Add(new FarmWorldTarget { Position = position, Id = "plot-" + i, Kind = "plot", Title = "Farm plot", PlotIndex = i });
+            Targets.Add(new FarmWorldTarget { Position = position, Id = "plot-" + i, Kind = "plot", Title = "农田", PlotIndex = i });
         }
         foreach (FarmSceneLayout.Station station in layout.stations)
         {
@@ -192,7 +192,7 @@ public sealed class FarmWorldView : MonoBehaviour
         go.transform.SetParent(worldRoot, false);
         go.transform.position = position;
         var label = go.AddComponent<TextMeshPro>();
-        label.font = TMP_Settings.defaultFontAsset;
+        label.font = ChineseUiFont.Font;
         label.text = text; label.fontSize = 2.5f; label.alignment = TextAlignmentOptions.Center;
         label.color = CozyUi.Cream;
         label.rectTransform.sizeDelta = new Vector2(width, 0.6f);

@@ -32,8 +32,8 @@ public static class SettingsPanelBuilder
         RectTransform card = CozyUi.Rect(root.transform, "Card", Vector2.one * 0.5f, Vector2.one * 0.5f,
             Vector2.one * 0.5f, Vector2.zero, new Vector2(1080f, 760f));
         CozyUi.Panel(card, CozyUi.Cream);
-        Text(card, "Title", "SETTINGS", 42f, 40f, 28f, 800f, 58f);
-        Text(card, "Subtitle", "Make yourself at home", 21f, 42f, 86f, 850f, 34f);
+        Text(card, "Title", "设置", 42f, 40f, 28f, 800f, 58f);
+        Text(card, "Subtitle", "按自己的习惯调整", 21f, 42f, 86f, 850f, 34f);
         Sprite decor = AssetDatabase.LoadAllAssetsAtPath("Assets/ThirdParty/FarmRPGTinyAssetPack/UI/Inventory/Decor.png")
             .OfType<Sprite>().FirstOrDefault();
         if (decor != null)
@@ -51,41 +51,41 @@ public static class SettingsPanelBuilder
         var rows = new List<SettingsOptionRow>();
         for (int i = 0; i < 4; i++)
         {
-            tabs[i] = Button(card, "Tab" + tabNames[i], tabNames[i], 40f, 170f + i * 83f, 220f, 64f);
+            tabs[i] = Button(card, "Tab" + tabNames[i], new[] { "显示", "声音", "游戏", "按键" }[i], 40f, 170f + i * 83f, 220f, 64f);
             pages[i] = Rect(card, tabNames[i] + "Page", 290f, 162f, 748f, 475f).gameObject;
         }
-        rows.Add(Row(pages[0].transform, "WindowMode", "Window mode", "Applied after confirmation", 0));
-        rows.Add(Row(pages[0].transform, "Resolution", "Resolution", "Desktop uses your monitor size", 1));
-        rows.Add(Row(pages[0].transform, "VSync", "Vertical sync", "Synchronize frames with the display", 2));
-        rows.Add(Row(pages[0].transform, "FrameRate", "Frame limit", "Available when VSync is off", 3));
-        Text(pages[0].transform, "DisplayNote", "Display changes revert after 15 seconds unless kept.\nChoose Revert to restore the previous display.", 19f, 12f, 372f, 720f, 80f);
-        rows.Add(Row(pages[1].transform, "MasterVolume", "Master volume", "All game audio", 0, 0, 100));
-        rows.Add(Row(pages[1].transform, "MuteUnfocused", "Mute in background", "Silence audio while another app is active", 1));
-        Text(pages[1].transform, "AudioNote", "Audio changes are previewed immediately.\nBack restores your previous volume.", 21f, 12f, 220f, 720f, 110f);
-        rows.Add(Row(pages[2].transform, "UiScale", "HUD scale", "Clock, backpack button and hotbar", 0, 80, 120));
-        rows.Add(Row(pages[2].transform, "WorldZoom", "World zoom", "Camera zoom while on the farm", 1, 75, 150));
-        rows.Add(Row(pages[2].transform, "ClockFormat", "Clock format", "Choose a 12 or 24 hour clock", 2));
-        rows.Add(Row(pages[2].transform, "ControlHints", "Control hints", "Show shortcut labels on the HUD", 3));
-        rows.Add(Row(pages[2].transform, "PauseUnfocused", "Pause in background", "Pause the farm when switching apps", 4));
-        string[] keyNames = { "Move up", "Move down", "Move left", "Move right", "Backpack" };
+        rows.Add(Row(pages[0].transform, "WindowMode", "窗口模式", "确认后应用", 0));
+        rows.Add(Row(pages[0].transform, "Resolution", "分辨率", "默认使用桌面分辨率", 1));
+        rows.Add(Row(pages[0].transform, "VSync", "垂直同步", "与显示器刷新率同步", 2));
+        rows.Add(Row(pages[0].transform, "FrameRate", "帧率上限", "关闭垂直同步后可调整", 3));
+        Text(pages[0].transform, "DisplayNote", "修改显示设置后需在 15 秒内确认。\n点击“还原”恢复原设置。", 19f, 12f, 372f, 720f, 80f);
+        rows.Add(Row(pages[1].transform, "MasterVolume", "总音量", "调整所有游戏声音", 0, 0, 100));
+        rows.Add(Row(pages[1].transform, "MuteUnfocused", "后台静音", "切换到其他程序时静音", 1));
+        Text(pages[1].transform, "AudioNote", "音量修改会立即预览。\n点击“返回”取消修改。", 21f, 12f, 220f, 720f, 110f);
+        rows.Add(Row(pages[2].transform, "UiScale", "界面大小", "调整时钟、按钮和快捷栏", 0, 80, 120));
+        rows.Add(Row(pages[2].transform, "WorldZoom", "镜头缩放", "调整农场镜头的远近", 1, 75, 150));
+        rows.Add(Row(pages[2].transform, "ClockFormat", "时间格式", "选择 12 或 24 小时制", 2));
+        rows.Add(Row(pages[2].transform, "ControlHints", "操作提示", "在界面上显示快捷键", 3));
+        rows.Add(Row(pages[2].transform, "PauseUnfocused", "后台暂停", "切换程序时暂停游戏", 4));
+        string[] keyNames = { "向上移动", "向下移动", "向左移动", "向右移动", "背包" };
         for (int i = 0; i < keyNames.Length; i++)
-            rows.Add(Row(pages[3].transform, "Binding" + i, keyNames[i], "Choose a letter key", i));
-        Text(card, "NavigationHint", "ESC  Back\nArrow keys  Navigate\nEnter  Select\n\nMove with arrows\nor your chosen keys", 18f, 44f, 512f, 214f, 128f);
+            rows.Add(Row(pages[3].transform, "Binding" + i, keyNames[i], "点击后按字母键修改", i));
+        Text(card, "NavigationHint", "Esc：返回\n方向键：选择\n回车：确认\n\n方向键和自定义按键\n都可以移动角色", 18f, 44f, 512f, 214f, 128f);
 
         TMP_Text status = Text(card, "Status", "", 20f, 42f, 647f, 1000f, 36f);
-        Button defaults = Button(card, "Defaults", "DEFAULTS", 42f, 697f, 240f, 44f);
-        Button back = Button(card, "Back", "BACK", 570f, 697f, 200f, 44f);
-        Button apply = Button(card, "Apply", "APPLY", 794f, 697f, 240f, 44f);
+        Button defaults = Button(card, "Defaults", "恢复默认", 42f, 697f, 240f, 44f);
+        Button back = Button(card, "Back", "返回", 570f, 697f, 200f, 44f);
+        Button apply = Button(card, "Apply", "应用", 794f, 697f, 240f, 44f);
         apply.image.color = CozyUi.Leaf;
 
         GameObject confirmation = CozyUi.ModalRoot(root.transform, "DisplayConfirmation");
         RectTransform confirmCard = CozyUi.Rect(confirmation.transform, "ConfirmCard", Vector2.one * 0.5f,
             Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.zero, new Vector2(720f, 310f));
         CozyUi.Panel(confirmCard, CozyUi.Cream);
-        TMP_Text countdown = Text(confirmCard, "Countdown", "Keep these display settings?", 30f, 38f, 38f, 644f, 125f);
+        TMP_Text countdown = Text(confirmCard, "Countdown", "保留新的显示设置？", 30f, 38f, 38f, 644f, 125f);
         countdown.alignment = TextAlignmentOptions.Center;
-        Button revert = Button(confirmCard, "RevertDisplay", "REVERT", 42f, 210f, 294f, 60f);
-        Button keep = Button(confirmCard, "KeepDisplay", "KEEP", 378f, 210f, 294f, 60f);
+        Button revert = Button(confirmCard, "RevertDisplay", "还原", 42f, 210f, 294f, 60f);
+        Button keep = Button(confirmCard, "KeepDisplay", "保留", 378f, 210f, 294f, 60f);
         keep.image.color = CozyUi.Leaf;
         confirmation.SetActive(false);
         var serialized = new SerializedObject(panel);

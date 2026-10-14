@@ -70,11 +70,11 @@ public sealed class InventorySaveData
     {
         var inventory = new InventorySaveData();
         inventory.Normalize();
-        inventory.slots[0].Set("hoe", "Hoe", 1);
-        inventory.slots[1].Set("watering-can", "Watering Can", 1);
-        inventory.slots[2].Set("axe", "Axe", 1);
-        inventory.slots[3].Set("pickaxe", "Pickaxe", 1);
-        inventory.slots[4].Set("parsnip-seed", "Parsnip Seeds", 15);
+        inventory.slots[0].Set("hoe", "锄头", 1);
+        inventory.slots[1].Set("watering-can", "水壶", 1);
+        inventory.slots[2].Set("axe", "斧头", 1);
+        inventory.slots[3].Set("pickaxe", "镐", 1);
+        inventory.slots[4].Set("parsnip-seed", "防风草种子", 15);
         return inventory;
     }
 

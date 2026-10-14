@@ -18,7 +18,7 @@ public sealed class CharacterNameDatabase : ScriptableObject
     }
 
     [Tooltip("Locale used when the character creation panel opens.")]
-    [SerializeField] private string defaultLocaleCode = "en";
+    [SerializeField] private string defaultLocaleCode = "zh-CN";
     [SerializeField] private List<NamePool> pools = new List<NamePool>();
     private Dictionary<string, NamePool> poolsByLocale;
 

@@ -52,7 +52,7 @@ public sealed class FarmActionFeedback : MonoBehaviour
         {
             var view = new GameObject("ActionCaption" + i).AddComponent<TextMeshPro>();
             view.transform.SetParent(transform, false);
-            view.font = TMP_Settings.defaultFontAsset; view.fontSize = 2.3f;
+            view.font = ChineseUiFont.Font; view.fontSize = 2.3f;
             view.alignment = TextAlignmentOptions.Center;
             view.rectTransform.sizeDelta = new Vector2(4, 0.5f);
             view.GetComponent<MeshRenderer>().sortingOrder = 650;
@@ -68,7 +68,7 @@ public sealed class FarmActionFeedback : MonoBehaviour
     {
         if (!result.Success)
         {
-            ShowCaption(target.Position, "Can't use", new Color(1, 0.58f, 0.48f));
+            ShowCaption(target.Position, "无法使用", new Color(1, 0.58f, 0.48f));
             return;
         }
         AudioClip sound = assets != null ? assets.Find(action)?.sound : null;
@@ -89,8 +89,8 @@ public sealed class FarmActionFeedback : MonoBehaviour
             if (item?.icon != null) Spawn(target.Position, item.icon, Color.white, 0.38f, Vector2.up * 1.5f, 0.7f, true);
             ShowCaption(target.Position, "+" + count + " " + (item?.title ?? itemId), new Color(1, 0.94f, 0.62f));
         }
-        else ShowCaption(target.Position, action == PlayerAnimationType.Water ? "Watered" : action == PlayerAnimationType.Hoe ? "Tilled" :
-            action == PlayerAnimationType.Pickaxe ? "Cleared" : "Planted", tint);
+        else ShowCaption(target.Position, action == PlayerAnimationType.Water ? "已浇水" : action == PlayerAnimationType.Hoe ? "已耕地" :
+            action == PlayerAnimationType.Pickaxe ? "已清除" : "已播种", tint);
         RestoreReaction();
         if (target.Renderer != null)
         {

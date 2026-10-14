@@ -220,21 +220,21 @@ public static class ProjectHealthValidator
             errors.Add("GameDataCatalog has no character name pools.");
         else
         {
-            if (!string.Equals(catalog.CharacterNames.DefaultLocaleCode, "en", System.StringComparison.OrdinalIgnoreCase))
-                errors.Add("English must remain the default name locale until localization is enabled.");
+            if (!string.Equals(catalog.CharacterNames.DefaultLocaleCode, "zh-CN", System.StringComparison.OrdinalIgnoreCase))
+                errors.Add("Chinese must be the default character-name locale.");
 
-            CharacterNameDatabase.NamePool englishNames = catalog.CharacterNames.FindPool("en");
-            bool hasEnglishName = false;
-            if (englishNames != null)
+            CharacterNameDatabase.NamePool chineseNames = catalog.CharacterNames.FindPool("zh-CN");
+            bool hasChineseName = false;
+            if (chineseNames != null)
             {
-                for (int i = 0; i < englishNames.Names.Count; i++)
+                for (int i = 0; i < chineseNames.Names.Count; i++)
                 {
-                    if (string.IsNullOrWhiteSpace(englishNames.Names[i])) continue;
-                    hasEnglishName = true;
+                    if (string.IsNullOrWhiteSpace(chineseNames.Names[i])) continue;
+                    hasChineseName = true;
                     break;
                 }
             }
-            if (!hasEnglishName) errors.Add("The English character-name pool is missing or empty.");
+            if (!hasChineseName) errors.Add("The Chinese character-name pool is missing or empty.");
         }
     }
 

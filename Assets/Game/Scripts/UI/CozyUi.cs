@@ -48,7 +48,7 @@ public static class CozyUi
     {
         RectTransform rect = Rect(parent, name, anchorMin, anchorMax, pivot, position, dimensions);
         TextMeshProUGUI text = rect.gameObject.AddComponent<TextMeshProUGUI>();
-        text.font = TMP_Settings.defaultFontAsset;
+        text.font = ChineseUiFont.Font;
         text.text = value;
         text.fontSize = size;
         text.color = color;

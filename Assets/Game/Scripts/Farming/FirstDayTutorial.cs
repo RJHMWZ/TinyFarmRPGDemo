@@ -59,21 +59,21 @@ public sealed class FirstDayTutorial
             switch (Step)
             {
                 case FirstDayTutorialStep.SelectHoe:
-                    return new TutorialObjective("SELECT YOUR HOE", "Press 1 or click the Hoe in your hotbar.", save.farm.tutorialHoeSelected ? 1 : 0, 1);
+                    return new TutorialObjective("选择锄头", "按 1 或点击快捷栏中的锄头。", save.farm.tutorialHoeSelected ? 1 : 0, 1);
                 case FirstDayTutorialStep.TillSoil:
-                    return new TutorialObjective("PREPARE THE FIELD", "Use the Hoe on 3 empty farm plots.", progression.Counter("till"), 3);
+                    return new TutorialObjective("准备农田", "靠近农田，用锄头耕出 3 块土地。", progression.Counter("till"), 3);
                 case FirstDayTutorialStep.PlantSeeds:
-                    return new TutorialObjective("PLANT YOUR SEEDS", "Select Parsnip Seeds and plant 3 tilled plots.", progression.Counter("plant"), 3);
+                    return new TutorialObjective("播下种子", "选择防风草种子，在 3 块耕地上播种。", progression.Counter("plant"), 3);
                 case FirstDayTutorialStep.WaterCrops:
-                    return new TutorialObjective("WATER YOUR CROPS", "Select the Watering Can and water 3 planted plots.", progression.Counter("water"), 3);
+                    return new TutorialObjective("给作物浇水", "选择水壶，给种下的 3 块农田浇水。", progression.Counter("water"), 3);
                 case FirstDayTutorialStep.Sleep:
-                    return new TutorialObjective("END THE DAY", "Go to HOME / SLEEP and choose SLEEP & SAVE.", progression.Counter("sleep"), 1);
+                    return new TutorialObjective("结束今天", "前往住宅，选择“睡觉并保存”。", progression.Counter("sleep"), 1);
                 case FirstDayTutorialStep.Harvest:
-                    return new TutorialObjective("FIRST HARVEST", "Your first crops grew overnight. Harvest one ripe crop.", progression.Counter("harvest"), 1);
+                    return new TutorialObjective("第一次收获", "第一批作物已成熟，收获一个试试。", progression.Counter("harvest"), 1);
                 case FirstDayTutorialStep.Ship:
-                    return new TutorialObjective("SHIP YOUR CROP", "Take a harvested crop to SHIPPING and ship at least one.", progression.Counter("ship"), 1);
+                    return new TutorialObjective("出售作物", "把收获的作物带到出货箱，出售至少一个。", progression.Counter("ship"), 1);
                 default:
-                    return new TutorialObjective("FIRST DAY COMPLETE", "Your farm is ready. Choose your own next goal!", 1, 1);
+                    return new TutorialObjective("新手引导完成", "现在开始经营自己的农场吧！", 1, 1);
             }
         }
     }
@@ -126,6 +126,6 @@ public sealed class FirstDayTutorial
         save.player.money += RewardGold;
         progression.AddExperience(RewardExperience);
         save.farm.tutorialRewardClaimed = true;
-        return "First day complete! +" + RewardGold + "g and +" + RewardExperience + " Farming XP.";
+        return "新手引导完成！获得 " + RewardGold + " 金币和 " + RewardExperience + " 农场经验。";
     }
 }

@@ -91,9 +91,11 @@ If another system also needs to pause gameplay, call `GameRoot.Instance.Pause.Se
 
 ## Current language policy
 
-English is the only active game language in the current milestone. Character creation always generates names from the `en` pool, and project validation requires that pool to exist and contain at least one valid name.
+Simplified Chinese is the active development language. Player-visible menu, settings, HUD, farming, inventory, task and dialogue text is Chinese. Stable item IDs, page IDs, object names and asset filenames remain unchanged.
 
-The `zh-CN` name pool remains stored in `CharacterNameDatabase` for future localization work, but runtime UI must not select it until a complete language service, translated text catalog, and font policy are introduced together.
+Character creation uses the `zh-CN` name pool through `CharacterNameDatabase.DefaultLocaleCode`. Existing player-entered names remain unchanged.
+
+`ChineseUiFont` loads `Resources/Fonts/ChineseUI`, a dynamic multi-atlas TMP font built from `ChineseText.otf` (a readable Noto Sans CJK SC subset). Latin symbols use the bundled Liberation Sans fallback. The source and OFL license are documented in `Art/Fonts/ChineseText.md`. `Tools > Tiny Farm > UI > Apply Chinese Font and Layout` reapplies the font to authored prefabs and refreshes the farm panel layout.
 
 ## Save evolution
 
@@ -120,4 +122,4 @@ The validator checks:
 - duplicate or incomplete UI panel registrations;
 - missing MonoBehaviour scripts on game-owned prefabs.
 
-See `CommercialRoadmap.md` for the current English-only boundary and the ordered production priorities.
+See `CommercialRoadmap.md` for the current Chinese development UI and the ordered production priorities.

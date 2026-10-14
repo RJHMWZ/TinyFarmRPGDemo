@@ -64,7 +64,7 @@ public sealed class FarmInteraction : MonoBehaviour
         }
         FarmWorldTarget target = pointerTarget ?? facingTarget;
         runtime.World.SetHighlight(target);
-        runtime.InteractionHint = target == null ? "Move close to a target. Left click: use   Right click / Space: interact" : Describe(target);
+        runtime.InteractionHint = target == null ? "靠近目标　左键使用工具　右键 / 空格交互" : Describe(target);
 
         bool keyboardUse = keyboard != null && keyboard.spaceKey.wasPressedThisFrame;
         bool gamepadUse = Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame;
@@ -121,7 +121,7 @@ public sealed class FarmInteraction : MonoBehaviour
             FarmResult result = game.Execute(() =>
             {
                 if (game.Save.inventory.slots[slot].itemId != held || plot && game.Farming.IsReady(game.Save.farm.plots[target.PlotIndex]) != harvest)
-                    return FarmResult.Fail("The selected item or target changed. Try again.");
+                    return FarmResult.Fail("所选物品或目标已变化，请重试。");
                 return plot ? game.Farming.UsePlot(target.PlotIndex, slot) : game.Farming.Gather(target.Id, target.Kind, slot);
             });
             runtime.ActionFeedback.Play(action, target, result, reward, count);
@@ -141,11 +141,11 @@ public sealed class FarmInteraction : MonoBehaviour
     }
     private string Describe(FarmWorldTarget target)
     {
-        if (target.Kind != "plot") return "Right click / Space: " + target.Title;
+        if (target.Kind != "plot") return "右键 / 空格：" + target.Title;
         var plot = runtime.Game.Save.farm.plots[target.PlotIndex];
-        if (runtime.Game.Farming.IsReady(plot)) return "Left click / Space: Harvest ripe crop";
+        if (runtime.Game.Farming.IsReady(plot)) return "左键 / 空格：收获成熟作物";
         FarmCrop crop = runtime.Game.Content.Crop(plot.seedId);
-        if (crop != null) return runtime.Game.Content.Item(crop.harvestId).title + "  " + plot.growth + "/" + crop.growthDays + " days | " + (plot.watered ? "Watered" : "Needs water");
-        return plot.tilled ? "Tilled plot | Select seeds to plant" : "Empty plot | Select hoe to till";
+        if (crop != null) return runtime.Game.Content.Item(crop.harvestId).title + "  " + plot.growth + "/" + crop.growthDays + " 天　·　" + (plot.watered ? "已浇水" : "需要浇水");
+        return plot.tilled ? "已耕地　·　选择种子播种" : "空地　·　选择锄头耕地";
     }
 }

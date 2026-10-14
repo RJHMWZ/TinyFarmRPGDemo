@@ -103,9 +103,9 @@ public sealed class FarmGame
         Progression.Record("sleep");
         string tutorialMessage = Tutorial.Refresh();
         PublishChanged(FarmChange.All);
-        string morningHint = tutorialHarvestReady ? "Your first crops are ready to harvest!" :
-            rain ? "Rain waters the fields today." : "Remember to water your crops.";
-        FarmResult result = FarmResult.Ok("Good morning! Shipping income: " + income + "g. " + morningHint);
+        string morningHint = tutorialHarvestReady ? "第一批作物成熟了，快去收获吧！" :
+            rain ? "今天下雨，农田会自动浇水。" : "记得给作物浇水。";
+        FarmResult result = FarmResult.Ok("早上好！出货收入：" + income + " 金币。" + morningHint);
         Feedback?.Invoke(result);
         if (!string.IsNullOrEmpty(tutorialMessage)) Feedback?.Invoke(FarmResult.Ok(tutorialMessage));
         DayEnded?.Invoke();

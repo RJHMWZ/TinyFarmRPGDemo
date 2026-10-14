@@ -39,50 +39,50 @@ public static class FarmContentBuilder
         var data = ScriptableObject.CreateInstance<FarmContent>();
         AssetDatabase.CreateAsset(data, ContentPath);
         var items = new List<FarmItem>();
-        AddItem(items, "hoe", "Hoe", FarmItemKind.Tool, 0, 0, "Till empty farm plots.", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Hoe.png"));
-        AddItem(items, "watering-can", "Watering Can", FarmItemKind.Tool, 0, 0, "Water tilled soil. Crops grow only after watered days.", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Watering can.png"));
-        AddItem(items, "axe", "Axe", FarmItemKind.Tool, 0, 0, "Gather wood from trees.", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Axe.png"));
-        AddItem(items, "pickaxe", "Pickaxe", FarmItemKind.Tool, 0, 0, "Gather stone or clear empty tilled plots.", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Pickaxe.png"));
-        AddItem(items, "wood", "Wood", FarmItemKind.Material, 0, 3, "Construction and crafting material.", Icon(data, "RPG icons/Extras/Wood.png"));
-        AddItem(items, "stone", "Stone", FarmItemKind.Material, 0, 2, "Useful for sprinklers and tools.", Icon(data, "RPG icons/Extras/Stones.png"));
-        AddItem(items, "berry", "Wild Berries", FarmItemKind.Food, 25, 10, "Eat to restore 15 energy or give as a gift.", Icon(data, "Food Icons/Blackberry.png"), 15);
-        AddItem(items, "salad", "Farm Salad", FarmItemKind.Food, 90, 35, "A fresh meal. Restores 45 energy.", Icon(data, "Food Icons/Salad.png"), 45);
-        AddItem(items, "fertilizer", "Fertilizer", FarmItemKind.Material, 35, 10, "Apply before planting for one extra crop per harvest.", Icon(data, "RPG icons/Extras/Stones.png"));
-        AddItem(items, "sprinkler", "Sprinkler", FarmItemKind.Furniture, 250, 80, "Waters its plot and four adjacent plots every morning.", Icon(data, "RPG icons/Weapons and Armor/3. Iron/Watering Can.png"));
+        AddItem(items, "hoe", "锄头", FarmItemKind.Tool, 0, 0, "用于耕开空地，为播种做准备。", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Hoe.png"));
+        AddItem(items, "watering-can", "水壶", FarmItemKind.Tool, 0, 0, "给耕地浇水，作物只有在浇水后才会生长。", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Watering can.png"));
+        AddItem(items, "axe", "斧头", FarmItemKind.Tool, 0, 0, "砍伐树木，收集木材。", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Axe.png"));
+        AddItem(items, "pickaxe", "镐", FarmItemKind.Tool, 0, 0, "采集石头，或清除空耕地。", Icon(data, "RPG icons/Weapons and Armor/1. Wood/Pickaxe.png"));
+        AddItem(items, "wood", "木材", FarmItemKind.Material, 0, 3, "用于建设和制作物品。", Icon(data, "RPG icons/Extras/Wood.png"));
+        AddItem(items, "stone", "石头", FarmItemKind.Material, 0, 2, "用于制作洒水器和工具。", Icon(data, "RPG icons/Extras/Stones.png"));
+        AddItem(items, "berry", "野生浆果", FarmItemKind.Food, 25, 10, "食用恢复 15 体力，也可以送给村民。", Icon(data, "Food Icons/Blackberry.png"), 15);
+        AddItem(items, "salad", "农场沙拉", FarmItemKind.Food, 90, 35, "新鲜的沙拉，食用恢复 45 体力。", Icon(data, "Food Icons/Salad.png"), 45);
+        AddItem(items, "fertilizer", "肥料", FarmItemKind.Material, 35, 10, "播种前施肥，每次收获增加一个产物。", Icon(data, "RPG icons/Extras/Stones.png"));
+        AddItem(items, "sprinkler", "洒水器", FarmItemKind.Furniture, 250, 80, "每天早上浇灌自身和上下左右的四格农田。", Icon(data, "RPG icons/Weapons and Armor/3. Iron/Watering Can.png"));
         data.crops = new[]
         {
-            Crop(data, items, "parsnip", "Parsnip", "Spring", 4, 20, 45, 1),
-            Crop(data, items, "potato", "Potato", "Spring", 5, 35, 75, 1),
-            Crop(data, items, "tomato", "Tomato", "Summer", 5, 40, 50, 2, 2),
-            Crop(data, items, "pumpkin", "Pumpkin", "Fall", 7, 70, 150, 4),
-            Crop(data, items, "carrot", "Carrot", "Spring", 4, 25, 45, 0)
+            Crop(data, items, "parsnip", "防风草", "Spring", 4, 20, 45, 1),
+            Crop(data, items, "potato", "土豆", "Spring", 5, 35, 75, 1),
+            Crop(data, items, "tomato", "番茄", "Summer", 5, 40, 50, 2, 2),
+            Crop(data, items, "pumpkin", "南瓜", "Fall", 7, 70, 150, 4),
+            Crop(data, items, "carrot", "胡萝卜", "Spring", 4, 25, 45, 0)
         };
         data.items = items.ToArray();
         data.RebuildIndex();
         data.recipes = new[]
         {
-            Recipe("fertilizer", "Fertilizer", "fertilizer", 2, 1, new FarmIngredient("wood", 3), new FarmIngredient("stone", 2)),
-            Recipe("salad", "Farm Salad", "salad", 1, 1, new FarmIngredient("parsnip", 1), new FarmIngredient("berry", 2)),
-            Recipe("sprinkler", "Sprinkler", "sprinkler", 1, 2, new FarmIngredient("wood", 10), new FarmIngredient("stone", 10)),
-            Recipe("seed-pouch", "Carrot Seed Pouch", "carrot-seed", 3, 2, new FarmIngredient("carrot", 1), new FarmIngredient("wood", 2))
+            Recipe("fertilizer", "肥料", "fertilizer", 2, 1, new FarmIngredient("wood", 3), new FarmIngredient("stone", 2)),
+            Recipe("salad", "农场沙拉", "salad", 1, 1, new FarmIngredient("parsnip", 1), new FarmIngredient("berry", 2)),
+            Recipe("sprinkler", "洒水器", "sprinkler", 1, 2, new FarmIngredient("wood", 10), new FarmIngredient("stone", 10)),
+            Recipe("seed-pouch", "胡萝卜种子包", "carrot-seed", 3, 2, new FarmIngredient("carrot", 1), new FarmIngredient("wood", 2))
         };
         data.quests = new[]
         {
-            Quest("first-soil", "A Fresh Start", "Till five plots with your hoe.", "", "till", 5, 80, 20),
-            Quest("first-seeds", "Seeds of Tomorrow", "Plant five seeds.", "first-soil", "plant", 5, 100, 20),
-            Quest("first-water", "A Little Care", "Water five plots.", "first-seeds", "water", 5, 60, 20),
-            Quest("neighbors", "Meet the Neighbors", "Talk to villagers on three occasions.", "", "talk", 3, 90, 30),
-            Quest("gatherer", "Gather the Basics", "Gather from five resource nodes.", "", "gather", 5, 100, 40),
-            Quest("first-harvest", "First Harvest", "Harvest five crops.", "first-water", "harvest", 5, 150, 50),
-            Quest("first-shipping", "From Farm to Market", "Ship five items using the shipping bin.", "first-harvest", "ship", 5, 120, 40),
-            Quest("maker", "Made by Hand", "Craft three items.", "gatherer", "craft", 3, 150, 50),
-            Quest("friend", "A Thoughtful Gift", "Give three gifts to your neighbors.", "neighbors", "gift", 3, 120, 40),
-            Quest("prosperity", "Growing Together", "Earn 1000 gold from shipping.", "first-shipping", "earn", 1000, 300, 100)
+            Quest("first-soil", "新的开始", "用锄头耕出 5 块土地。", "", "till", 5, 80, 20),
+            Quest("first-seeds", "播下希望", "播下 5 颗种子。", "first-soil", "plant", 5, 100, 20),
+            Quest("first-water", "悉心照料", "给 5 块农田浇水。", "first-seeds", "water", 5, 60, 20),
+            Quest("neighbors", "认识邻居", "与村民聊天 3 次。", "", "talk", 3, 90, 30),
+            Quest("gatherer", "收集基础材料", "采集资源 5 次。", "", "gather", 5, 100, 40),
+            Quest("first-harvest", "第一次收获", "收获 5 个作物。", "first-water", "harvest", 5, 150, 50),
+            Quest("first-shipping", "从农场到集市", "通过出货箱出售 5 个物品。", "first-harvest", "ship", 5, 120, 40),
+            Quest("maker", "亲手制作", "制作物品 3 次。", "gatherer", "craft", 3, 150, 50),
+            Quest("friend", "一份心意", "给村民送礼 3 次。", "neighbors", "gift", 3, 120, 40),
+            Quest("prosperity", "农场成长", "通过出货累计赚取 1000 金币。", "first-shipping", "earn", 1000, 300, 100)
         };
         data.villagers = new[]
         {
-            new FarmNpc { id = "willow", title = "Willow", favoriteItem = "parsnip", dialogue = new[] { "Welcome! Start with a few watered plots. A small farm can do great things.", "Leave room in your backpack before harvesting. Your crops can wait safely.", "Rain is a farmer's best helper. Use the extra time to gather materials." } },
-            new FarmNpc { id = "rowan", title = "Rowan", favoriteItem = "berry", dialogue = new[] { "Wood and stone regrow in two days around here. Take only what you need.", "A sprinkler waters its own plot and the four plots around it each morning.", "Gifts are lovely, but a friendly conversation matters just as much." } }
+            new FarmNpc { id = "willow", title = "薇洛", favoriteItem = "parsnip", dialogue = new[] { "欢迎！先种几块地并浇好水，小农场也会有大收获。", "收获前记得给背包留点空间。成熟的作物可以安心留在地里。", "雨水是农夫的好帮手，下雨时可以多去收集些材料。" } },
+            new FarmNpc { id = "rowan", title = "罗恩", favoriteItem = "berry", dialogue = new[] { "附近的木材和石头两天后就会恢复，按需采集就好。", "洒水器每天早上都会浇灌自身和周围四格农田。", "礼物让人开心，友好的聊天也同样重要。" } }
         };
         data.grass = Slice(data, "Tileset/Tileset Grass Spring.png", new Rect(144, 592, 16, 16), "FarmGrass");
         data.soil = Slice(data, "Tileset/Tilled Soil and wet soil.png", new Rect(144, 80, 16, 16), "FarmSoil");
@@ -110,13 +110,14 @@ public static class FarmContentBuilder
     }
     private static FarmCrop Crop(FarmContent data, List<FarmItem> items, string id, string title, string artSeason, int days, int buy, int sell, int seasons, int regrow = 0)
     {
-        string path = "Crops/" + artSeason + "/" + title + ".png";
+        string artTitle = char.ToUpperInvariant(id[0]) + id.Substring(1);
+        string path = "Crops/" + artSeason + "/" + artTitle + ".png";
         Sprite[] frames = AssetDatabase.LoadAllAssetsAtPath(Pack + path).OfType<Sprite>().OrderBy(s => s.rect.x).ToArray();
         Sprite[] stages = frames.Take(Math.Max(1, frames.Length - 1)).Select(s => Centered(data, s)).ToArray();
-        Sprite icon = Icon(data, "Food Icons/" + title + ".png");
+        Sprite icon = Icon(data, "Food Icons/" + artTitle + ".png");
         if (icon == null && frames.Length > 0) icon = Centered(data, frames[frames.Length - 1]);
-        AddItem(items, id + "-seed", title + " Seeds", FarmItemKind.Seed, buy, Math.Max(1, buy / 4), days + " watered days. " + (seasons == 0 ? "All seasons." : artSeason + " crop."), stages.FirstOrDefault());
-        AddItem(items, id, title, FarmItemKind.Crop, 0, sell, "Fresh produce. Ship for gold, cook, eat or give as a gift.", icon, 8);
+        AddItem(items, id + "-seed", title + "种子", FarmItemKind.Seed, buy, Math.Max(1, buy / 4), days + " 天浇水后成熟。" + (seasons == 0 ? "四季可种。" : GameCalendar.SeasonName(seasons == 1 ? 0 : seasons == 2 ? 1 : 2) + "作物。"), stages.FirstOrDefault());
+        AddItem(items, id, title, FarmItemKind.Crop, 0, sell, "新鲜农产品，可以出售、制作食物或送礼。", icon, 8);
         return new FarmCrop { seedId = id + "-seed", harvestId = id, growthDays = days, seasonMask = seasons, regrowDays = regrow, stages = stages };
     }
     private static void AddItem(List<FarmItem> items, string id, string title, FarmItemKind kind, int buy, int sell, string description, Sprite icon, int energy = 0) =>
@@ -158,10 +159,10 @@ public static class FarmContentBuilder
             CozyUi.Panel(card, CozyUi.Cream);
             var serialized = new SerializedObject(panel);
             Set(serialized, "card", card);
-            Set(serialized, "title", Text(card, "Title", "FARM JOURNAL", 36, 34, 22, 1000, 50));
+            Set(serialized, "title", Text(card, "Title", "农场任务", 36, 34, 22, 1000, 50));
             Set(serialized, "summary", Text(card, "Summary", "", 21, 34, 77, 1090, 35));
             Set(serialized, "close", Button(card, "Close", "X", 1080, 24, 64, 50, out _));
-            string[] tabNames = { "BACKPACK", "CRAFTING", "JOURNAL", "GUIDE" };
+            string[] tabNames = { "背包", "制作", "任务", "指南" };
             var tabs = new List<Button>();
             for (int i = 0; i < 4; i++) tabs.Add(Button(card, "Tab" + i, tabNames[i], 34 + i * 280, 126, 263, 50, out _));
             SetArray(serialized, "tabs", tabs);
@@ -192,10 +193,11 @@ public static class FarmContentBuilder
                 label.fontSize = 21; actionLabels.Add(label);
             }
             SetArray(serialized, "actions", actions); SetArray(serialized, "actionLabels", actionLabels);
-            Set(serialized, "previous", Button(card, "Previous", "PREVIOUS", 34, 648, 170, 32, out _));
-            Set(serialized, "next", Button(card, "Next", "NEXT", 584, 648, 170, 32, out _));
+            Set(serialized, "previous", Button(card, "Previous", "上一页", 34, 648, 170, 32, out _));
+            Set(serialized, "next", Button(card, "Next", "下一页", 584, 648, 170, 32, out _));
             Set(serialized, "status", Text(card, "Status", "", 20, 34, 750, 1110, 44));
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            panel.ConfigurePresentation();
             PrefabUtility.SaveAsPrefabAsset(root, PanelPath);
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }

@@ -97,7 +97,7 @@ public sealed class MainMenuController : MonoBehaviour
             if (saves.IsSlotOccupied(selectedSlot) && !overwriteConfirmed)
             {
                 overwriteConfirmed = true;
-                saveView.Description.text += "\nThis slot already has data. Click Create again to overwrite it.";
+                saveView.Description.text += "\n此槽位已有存档，再点“创建”将覆盖它。";
                 return;
             }
 
@@ -120,14 +120,14 @@ public sealed class MainMenuController : MonoBehaviour
         if (pendingDeleteSlot != selectedSlot)
         {
             pendingDeleteSlot = selectedSlot;
-            saveView.DeleteButtonLabel.text = "Confirm Delete";
-            saveView.Description.text += "\nClick Confirm Delete to permanently remove this save.";
+            saveView.DeleteButtonLabel.text = "确认删除";
+            saveView.Description.text += "\n再次点击“确认删除”将永久删除这个存档。";
             return;
         }
 
         if (!saves.Delete(selectedSlot))
         {
-            saveView.Description.text += "\nThe save could not be deleted. Check the log for details.";
+            saveView.Description.text += "\n删除失败，请查看日志。";
             return;
         }
         pendingDeleteSlot = -1;
@@ -197,19 +197,19 @@ public sealed class MainMenuController : MonoBehaviour
         if (saves == null) return;
 
         bool loading = panelMode == SavePanelMode.Load;
-        saveView.PanelTitle.text = loading ? "Choose a Save to Load" : "Choose a Slot for New Game";
-        saveView.PrimaryActionLabel.text = loading ? "Load" : "Create";
-        saveView.DeleteButtonLabel.text = "Delete";
+        saveView.PanelTitle.text = loading ? "选择要加载的存档" : "选择新游戏存档槽";
+        saveView.PrimaryActionLabel.text = loading ? "加载" : "创建";
+        saveView.DeleteButtonLabel.text = "删除";
 
         for (int i = 0; i < saveView.SlotCount; i++)
         {
             slotHasSave[i] = saves.TryReadMetadata(i, out slotMetadata[i]);
             slotOccupied[i] = saves.IsSlotOccupied(i);
             saveView.GetSlotLabel(i).text = slotHasSave[i]
-                ? "Slot " + (i + 1) + "  -  " + DisplayName(slotMetadata[i])
+                ? "存档 " + (i + 1) + "  -  " + DisplayName(slotMetadata[i])
                 : slotOccupied[i]
-                    ? "Slot " + (i + 1) + "  -  Unavailable"
-                    : "Slot " + (i + 1) + "  -  Empty";
+                    ? "存档 " + (i + 1) + "　·　无法读取"
+                    : "存档 " + (i + 1) + "　·　空存档";
 
             Button button = saveView.GetSlotButton(i);
             if (button.image != null)
@@ -221,12 +221,12 @@ public sealed class MainMenuController : MonoBehaviour
         bool selectedHasSave = selected && slotHasSave[selectedSlot];
         bool selectedOccupied = selected && slotOccupied[selectedSlot];
         saveView.Description.text = !selected
-            ? "Select one of the four save slots.\nSelecting a slot will not start the game."
+            ? "请选择一个存档槽。\n选中后点击按钮继续。"
             : selectedHasSave
-                ? "Slot " + (selectedSlot + 1) + "\nCharacter: " + DisplayName(selectedMetadata) + "\nSave data is available."
+                ? "存档 " + (selectedSlot + 1) + "\n角色：" + DisplayName(selectedMetadata) + "\n可以加载这个存档。"
                 : selectedOccupied
-                    ? "Slot " + (selectedSlot + 1) + "\nSave data exists but cannot be loaded by this game version."
-                : "Slot " + (selectedSlot + 1) + "\nEmpty slot";
+                    ? "存档 " + (selectedSlot + 1) + "\n这个存档无法由当前游戏版本读取。"
+                : "存档 " + (selectedSlot + 1) + "\n空存档槽";
         saveView.PrimaryActionButton.interactable = selected && (!loading || selectedHasSave);
         saveView.DeleteButton.interactable = selectedOccupied;
     }
@@ -241,7 +241,7 @@ public sealed class MainMenuController : MonoBehaviour
 
     private static string DisplayName(SaveMetadata metadata)
     {
-        return metadata == null || string.IsNullOrWhiteSpace(metadata.playerName) ? "Unnamed" : metadata.playerName;
+        return metadata == null || string.IsNullOrWhiteSpace(metadata.playerName) ? "未命名" : metadata.playerName;
     }
 
     private SaveService GetSaveService()
