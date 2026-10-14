@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 /// <summary>Inventory mutations use a private draft. Failed operations never consume partial stacks.</summary>
 public sealed class InventoryService
@@ -58,6 +59,62 @@ public sealed class InventoryService
         }
         return true;
     }
+    public bool RemoveFromSlot(int slotIndex, int count)
+    {
+        if (slotIndex < 0 || slotIndex >= data.slots.Length || count <= 0) return false;
+        var slot = data.slots[slotIndex];
+        if (slot.IsEmpty || slot.count < count) return false;
+        slot.count -= count;
+        if (slot.count == 0) slot.Set(null, null, 0);
+        return true;
+    }
+    public int CapacityFor(string id)
+    {
+        var item = content.Item(id);
+        if (item == null) return 0;
+        long capacity = 0;
+        foreach (var slot in data.slots)
+            if (slot.IsEmpty || slot.itemId == id)
+                capacity += Math.Max(0, item.maxStack - (slot.IsEmpty ? 0 : slot.count));
+        return (int)Math.Min(int.MaxValue, capacity);
+    }
+    /// <summary>Merge and sort only the requested range; the hotbar can stay untouched.</summary>
+    public bool Organize(int firstSlot)
+    {
+        if (firstSlot < 0 || firstSlot >= data.slots.Length) return false;
+        var draft = Copy();
+        var stacks = new List<InventorySlotSaveData>();
+        for (int i = firstSlot; i < draft.slots.Length; i++)
+        {
+            var source = draft.slots[i];
+            if (source.IsEmpty) continue;
+            int maxStack = content.Item(source.itemId)?.maxStack ?? 99;
+            foreach (var target in stacks)
+            {
+                if (target.itemId != source.itemId) continue;
+                int amount = Math.Min(source.count, Math.Max(0, maxStack - target.count));
+                target.count += amount;
+                source.count -= amount;
+                if (source.count == 0) break;
+            }
+            if (source.count > 0) stacks.Add(source);
+        }
+        stacks.Sort((a, b) =>
+        {
+            int kind = (content.Item(a.itemId)?.kind ?? (FarmItemKind)int.MaxValue)
+                .CompareTo(content.Item(b.itemId)?.kind ?? (FarmItemKind)int.MaxValue);
+            if (kind != 0) return kind;
+            int id = StringComparer.Ordinal.Compare(a.itemId, b.itemId);
+            return id != 0 ? id : b.count.CompareTo(a.count);
+        });
+        // The list references the draft slots, so copy into fresh slots before clearing.
+        var result = new InventorySaveData();
+        result.Normalize();
+        for (int i = 0; i < firstSlot; i++) result.slots[i].Set(data.slots[i].itemId, data.slots[i].displayName, data.slots[i].count);
+        for (int i = 0; i < stacks.Count; i++) result.slots[firstSlot + i].Set(stacks[i].itemId, stacks[i].displayName, stacks[i].count);
+        Replace(result);
+        return true;
+    }
     public bool Move(int from, int to)
     {
         if (from < 0 || to < 0 || from >= data.slots.Length || to >= data.slots.Length || from == to) return false;
@@ -79,8 +136,7 @@ public sealed class InventoryService
         if (target == null || ReferenceEquals(data, target.data) || slotIndex < 0 || slotIndex >= data.slots.Length || count <= 0) return false;
         var slot = data.slots[slotIndex];
         if (slot.IsEmpty || slot.count < count || !target.Add(slot.itemId, count)) return false;
-        slot.count -= count;
-        if (slot.count == 0) slot.Set(null, null, 0);
+        RemoveFromSlot(slotIndex, count);
         return true;
     }
 }

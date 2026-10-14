@@ -15,6 +15,11 @@ public sealed class FarmProgressionService
         counter.value = (int)Math.Min(int.MaxValue, (long)counter.value + amount);
     }
     public void AddExperience(int amount) => save.farm.experience = Math.Min(1000000, save.farm.experience + Math.Max(0, amount));
+    public void RevertRecord(string id, int amount)
+    {
+        var counter = save.farm.counters.Find(x => x.id == id);
+        if (counter != null && amount > 0) counter.value = Math.Max(0, counter.value - amount);
+    }
     public bool Completed(string id) => Array.IndexOf(save.quests.completedQuestIds, id) >= 0;
     public bool Available(FarmQuest quest) => quest != null && !Completed(quest.id) &&
         (string.IsNullOrEmpty(quest.prerequisite) || Completed(quest.prerequisite));
@@ -62,7 +67,7 @@ public sealed class FarmProgressionService
         FarmItem item = content.Item(slot.itemId);
         if (slot.IsEmpty || item == null || item.kind == FarmItemKind.Tool) return FarmResult.Fail("Choose a crop, food or material to give.");
         bool loved = item.id == npc.favoriteItem;
-        if (!inventory.Remove(item.id, 1)) return FarmResult.Fail("Item unavailable.");
+        if (!inventory.RemoveFromSlot(slotIndex, 1)) return FarmResult.Fail("Item unavailable.");
         state.lastGiftDay = save.farm.daysPlayed;
         state.friendship = Math.Min(1000, state.friendship + (loved ? 80 : 30));
         Record("gift");

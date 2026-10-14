@@ -36,12 +36,14 @@ public sealed class FarmingService
         else if (slot.itemId == "fertilizer")
         {
             if (!plot.tilled || !string.IsNullOrEmpty(plot.seedId) || plot.fertilized) return FarmResult.Fail("Fertilize an empty tilled plot before planting.");
-            inventory.Remove(slot.itemId, 1); plot.fertilized = true;
+            if (!inventory.RemoveFromSlot(slotIndex, 1)) return FarmResult.Fail("Item unavailable.");
+            plot.fertilized = true;
         }
         else if (slot.itemId == "sprinkler")
         {
             if (!plot.tilled || plot.sprinkler) return FarmResult.Fail("Place one sprinkler on a tilled plot.");
-            inventory.Remove(slot.itemId, 1); plot.sprinkler = true; plot.watered = true;
+            if (!inventory.RemoveFromSlot(slotIndex, 1)) return FarmResult.Fail("Item unavailable.");
+            plot.sprinkler = true; plot.watered = true;
         }
         else if (slot.itemId == "pickaxe")
         {
@@ -57,7 +59,8 @@ public sealed class FarmingService
             if (!string.IsNullOrEmpty(plot.seedId)) return FarmResult.Fail("A crop is already growing here.");
             if (!crop.InSeason(save.world.season)) return FarmResult.Fail("This crop cannot grow in the current season.");
             string seedId = slot.itemId;
-            inventory.Remove(seedId, 1); plot.seedId = seedId; plot.growth = 0;
+            if (!inventory.RemoveFromSlot(slotIndex, 1)) return FarmResult.Fail("Item unavailable.");
+            plot.seedId = seedId; plot.growth = 0;
             progression.Record("plant");
         }
         save.farm.energy -= 2;

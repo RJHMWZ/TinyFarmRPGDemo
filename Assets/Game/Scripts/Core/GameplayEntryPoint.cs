@@ -37,14 +37,25 @@ public sealed class GameplayEntryPoint : MonoBehaviour
 
         if (!CharacterAppearanceService.Apply(save.player.appearance, dataCatalog, playerAppearance))
             Debug.LogError("Saved character appearance could not be applied.", this);
+        FarmSceneLayout layout = GetComponent<FarmSceneLayout>();
+        if (layout != null && layout.IsConfigured)
+        {
+            Vector2 position = layout.ResolvePlayerPosition(new Vector2(save.player.positionX, save.player.positionY), save.player.needsSceneSpawn);
+            save.player.positionX = position.x;
+            save.player.positionY = position.y;
+        }
+        save.player.needsSceneSpawn = false;
+        save.world.currentScene = gameObject.scene.name;
         playerAppearance.transform.position = new Vector3(
             save.player.positionX,
             save.player.positionY,
             playerAppearance.transform.position.z);
+        Rigidbody2D body = playerAppearance.GetComponent<Rigidbody2D>();
+        if (body != null) body.position = playerAppearance.transform.position;
 
         FarmRuntime farm = GetComponent<FarmRuntime>();
         if (farm == null) farm = gameObject.AddComponent<FarmRuntime>();
-        farm.Initialize(playerAppearance.transform);
+        if (!farm.Initialize(playerAppearance.transform)) return;
 
         GameplayHudController hud = GetComponent<GameplayHudController>();
         if (hud == null) hud = gameObject.AddComponent<GameplayHudController>();

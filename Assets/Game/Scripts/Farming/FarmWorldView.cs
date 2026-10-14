@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Tilemaps;
 
 public sealed class FarmWorldTarget
 {
@@ -29,6 +30,7 @@ public sealed class FarmWorldView : MonoBehaviour
     private Camera worldCamera;
     private SortingGroup playerSorting;
     private Color dayColor = new Color(0.64f, 0.79f, 0.68f);
+    private Rect worldBounds = new Rect(-13, -9, 26, 18);
     public void Initialize(FarmRuntime owner)
     {
         runtime = owner;
@@ -42,6 +44,20 @@ public sealed class FarmWorldView : MonoBehaviour
         playerSorting = runtime.Player.GetComponent<SortingGroup>();
         if (playerSorting == null) playerSorting = runtime.Player.gameObject.AddComponent<SortingGroup>();
         var content = runtime.Game.Content;
+        if (runtime.Layout != null && runtime.Layout.IsConfigured) BuildSceneWorld(content, runtime.Layout);
+        else BuildDemoWorld(content);
+        highlight = Draw("InteractionHighlight", Vector2.zero, null, new Color(1, 0.9f, 0.35f, 0.28f), Vector2.one * 1.1f, 800);
+        highlight.enabled = false;
+        nightOverlay = Draw("Nightfall", worldBounds.center, null, Color.clear, new Vector2(worldBounds.width + 2, worldBounds.height + 2), 700);
+        if (!worldBounds.Contains(runtime.Player.position))
+            runtime.Player.position = runtime.Layout != null ? runtime.Layout.spawnPoint.position : Vector3.zero;
+        if (worldCamera != null)
+            worldCamera.transform.position = CameraPosition(worldCamera);
+        runtime.Game.StateChanged += OnStateChanged;
+        Refresh();
+    }
+    private void BuildDemoWorld(FarmContent content)
+    {
         for (int y = -9; y <= 9; y++)
             for (int x = -13; x <= 13; x++)
                 Draw("Grass", new Vector2(x, y), content.grass, new Color(0.66f, 0.8f, 0.55f), Vector2.one, -1000);
@@ -86,12 +102,68 @@ public sealed class FarmWorldView : MonoBehaviour
         Collider("SouthFence", new Vector2(0, -9.5f), new Vector2(28, 1));
         Collider("WestFence", new Vector2(-13.5f, 0), new Vector2(1, 20));
         Collider("EastFence", new Vector2(13.5f, 0), new Vector2(1, 20));
-        highlight = Draw("InteractionHighlight", Vector2.zero, null, new Color(1, 0.9f, 0.35f, 0.28f), Vector2.one * 1.1f, 800);
-        nightOverlay = Draw("Nightfall", Vector2.zero, null, Color.clear, new Vector2(28, 20), 700);
-        if (Mathf.Abs(runtime.Player.position.x) > 12 || Mathf.Abs(runtime.Player.position.y) > 8)
-            runtime.Player.position = Vector3.zero;
-        runtime.Game.Changed += Refresh;
-        Refresh();
+    }
+    private void BuildSceneWorld(FarmContent content, FarmSceneLayout layout)
+    {
+        worldBounds = layout.worldBounds;
+        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+            foreach (TilemapRenderer renderer in root.GetComponentsInChildren<TilemapRenderer>())
+                renderer.sortingOrder = renderer.name == "Water" ? -980 : -1000 + renderer.sortingOrder;
+        foreach (Transform scenery in layout.sceneryRoots)
+        {
+            if (scenery == null) continue;
+            foreach (SpriteRenderer renderer in scenery.GetComponentsInChildren<SpriteRenderer>())
+            {
+                Bounds bounds = renderer.bounds;
+                float foot = bounds.min.y + 0.15f;
+                renderer.sortingOrder = Depth(foot);
+                if (renderer.GetComponent<Collider2D>() != null) continue;
+                bool tree = renderer.name.EndsWith("Tree", System.StringComparison.Ordinal);
+                bool fence = renderer.name.StartsWith("Fence", System.StringComparison.Ordinal);
+                Vector2 size = tree ? new Vector2(0.65f, 0.45f) :
+                    new Vector2(Mathf.Max(0.2f, bounds.size.x * (fence ? 0.9f : 0.8f)), fence ? 0.25f : Mathf.Min(1.4f, bounds.size.y * 0.35f));
+                Collider(renderer.name + "Footprint", new Vector2(bounds.center.x, bounds.min.y + size.y * 0.5f), size);
+            }
+        }
+        foreach (Tilemap map in layout.blockedTilemaps)
+        {
+            if (map == null) continue;
+            foreach (Vector3Int cell in map.cellBounds.allPositionsWithin)
+                if (map.HasTile(cell)) Collider("WaterBlocker", map.GetCellCenterWorld(cell), map.layoutGrid.cellSize);
+        }
+        for (int i = 0; i < FarmSaveData.Width * FarmSaveData.Height; i++)
+        {
+            Vector2 position = layout.PlotPosition(i);
+            soil.Add(Draw("Plot_" + i, position, content.soil, Color.white, Vector2.one * 0.94f, -800));
+            crops.Add(Draw("Crop_" + i, position + Vector2.up * 0.13f, null, Color.clear, Vector2.one * 0.8f, Depth(position.y)));
+            sprinklers.Add(Draw("Sprinkler_" + i, position + new Vector2(0.32f, -0.28f), content.Item("sprinkler")?.icon, Color.clear, Vector2.one * 0.22f, Depth(position.y) + 1));
+            Targets.Add(new FarmWorldTarget { Position = position, Id = "plot-" + i, Kind = "plot", Title = "Farm plot", PlotIndex = i });
+        }
+        foreach (FarmSceneLayout.Station station in layout.stations)
+        {
+            if (station == null || station.marker == null) continue;
+            Vector2 position = station.marker.position;
+            if (station.sceneRenderer != null)
+            {
+                Targets.Add(new FarmWorldTarget { Id = station.id, Kind = station.kind, Title = station.title, Position = position, Renderer = station.sceneRenderer });
+                Label(station.title, position + Vector2.up * 0.8f, 2.6f);
+                continue;
+            }
+            FarmNpc npc = station.kind == "villager" ? System.Array.Find(content.villagers, x => x.id == station.id) : null;
+            Sprite sprite = station.kind == "wood" ? content.tree : station.kind == "stone" ? content.rock :
+                station.kind == "berry" ? content.Item("berry")?.icon : station.kind == "sleep" ? content.bed :
+                station.kind == "shipping" || station.kind == "storage" ? content.chest :
+                station.kind == "villager" ? npc?.portrait : content.workbench;
+            bool layered = npc != null && npc.portrait == null && npc.layers != null && npc.layers.Length > 0;
+            Station(station.id, station.kind, station.title, position, sprite, layered ? Color.clear : Color.white);
+            if (layered)
+                for (int layer = 0; layer < npc.layers.Length; layer++)
+                    if (npc.layers[layer] != null) Draw(npc.id + "Part" + layer, position, npc.layers[layer], Color.white, Vector2.one * 1.5f, Depth(position.y) + layer);
+        }
+        Collider("NorthBoundary", new Vector2(worldBounds.center.x, worldBounds.yMax + 0.5f), new Vector2(worldBounds.width + 2, 1));
+        Collider("SouthBoundary", new Vector2(worldBounds.center.x, worldBounds.yMin - 0.5f), new Vector2(worldBounds.width + 2, 1));
+        Collider("WestBoundary", new Vector2(worldBounds.xMin - 0.5f, worldBounds.center.y), new Vector2(1, worldBounds.height + 2));
+        Collider("EastBoundary", new Vector2(worldBounds.xMax + 0.5f, worldBounds.center.y), new Vector2(1, worldBounds.height + 2));
     }
     public static Vector2 PlotPosition(int index) => new Vector2(1 + index % FarmSaveData.Width, 1 - index / FarmSaveData.Width);
     public static int Depth(float y) => 100 - Mathf.RoundToInt(y * 10);
@@ -140,6 +212,10 @@ public sealed class FarmWorldView : MonoBehaviour
         go.transform.SetParent(worldRoot, false); go.transform.position = position;
         go.AddComponent<BoxCollider2D>().size = size;
     }
+    private void OnStateChanged(FarmChange changes)
+    {
+        if ((changes & FarmChange.World) != 0) Refresh();
+    }
     private void Refresh()
     {
         var game = runtime.Game;
@@ -169,17 +245,21 @@ public sealed class FarmWorldView : MonoBehaviour
         if (runtime == null || runtime.Player == null) return;
         playerSorting.sortingOrder = Depth(runtime.Player.position.y) + 2;
         if (worldCamera == null) return;
-        float halfY = worldCamera.orthographicSize, halfX = halfY * worldCamera.aspect;
-        float x = halfX >= 13 ? 0 : Mathf.Clamp(runtime.Player.position.x, -13 + halfX, 13 - halfX);
-        float y = halfY >= 9 ? 0 : Mathf.Clamp(runtime.Player.position.y, -9 + halfY, 9 - halfY);
-        worldCamera.transform.position = Vector3.Lerp(worldCamera.transform.position, new Vector3(x, y, -10), 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
+        worldCamera.transform.position = Vector3.Lerp(worldCamera.transform.position, CameraPosition(worldCamera), 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
         float darkness = Mathf.InverseLerp(16f, 22f, runtime.Game.Save.world.hour + runtime.Game.Save.world.minute / 60f);
         worldCamera.backgroundColor = Color.Lerp(dayColor, new Color(0.16f, 0.22f, 0.36f), darkness);
         nightOverlay.color = new Color(0.08f, 0.12f, 0.28f, darkness * 0.48f + (runtime.Game.Save.world.weatherId == "rainy" ? 0.12f : 0));
     }
+    private Vector3 CameraPosition(Camera camera)
+    {
+        float halfY = camera.orthographicSize, halfX = halfY * camera.aspect;
+        float x = halfX * 2 >= worldBounds.width ? worldBounds.center.x : Mathf.Clamp(runtime.Player.position.x, worldBounds.xMin + halfX, worldBounds.xMax - halfX);
+        float y = halfY * 2 >= worldBounds.height ? worldBounds.center.y : Mathf.Clamp(runtime.Player.position.y, worldBounds.yMin + halfY, worldBounds.yMax - halfY);
+        return new Vector3(x, y, -10);
+    }
     private void OnDestroy()
     {
-        if (runtime != null && runtime.Game != null) runtime.Game.Changed -= Refresh;
+        if (runtime != null && runtime.Game != null) runtime.Game.StateChanged -= OnStateChanged;
         if (square != null) Destroy(square);
         if (pixel != null) Destroy(pixel);
     }

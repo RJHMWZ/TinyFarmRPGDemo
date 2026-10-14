@@ -3,7 +3,7 @@ using System;
 [Serializable]
 public sealed class GameSaveData
 {
-    public int version = 4;
+    public int version = 5;
     public SaveMetadata metadata = new SaveMetadata();
     public PlayerSaveData player = new PlayerSaveData();
     public WorldSaveData world = new WorldSaveData();
@@ -17,6 +17,7 @@ public sealed class GameSaveData
     {
         GameSaveData data = new GameSaveData();
         data.player.appearance = appearance ?? new CharacterCreationProfile();
+        data.player.needsSceneSpawn = true;
         data.metadata.playerName = data.player.appearance.playerName;
         data.metadata.lastSavedUtcTicks = DateTime.UtcNow.Ticks;
         return data;
@@ -44,6 +45,11 @@ public sealed class GameSaveData
             Array.Resize(ref relationships.friendshipValues, relationships.npcIds.Length);
         if (unlocks.unlockedIds == null) unlocks.unlockedIds = Array.Empty<string>();
         if (string.IsNullOrWhiteSpace(world.currentScene)) world.currentScene = GameSceneNames.Gameplay;
+        if (world.currentScene == GameSceneNames.LegacyGameplay)
+        {
+            world.currentScene = GameSceneNames.Gameplay;
+            player.needsSceneSpawn = true;
+        }
         world.year = Math.Max(1, world.year);
         world.day = Math.Max(1, Math.Min(GameCalendar.DaysPerSeason, world.day));
         world.season = Math.Max(0, Math.Min(3, world.season));
@@ -117,6 +123,7 @@ public sealed class PlayerSaveData
     public CharacterCreationProfile appearance = new CharacterCreationProfile();
     public float positionX;
     public float positionY;
+    public bool needsSceneSpawn;
     public int money = 500;
 }
 

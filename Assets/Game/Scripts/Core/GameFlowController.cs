@@ -53,6 +53,7 @@ public sealed class GameFlowController : MonoBehaviour
         {
             Debug.LogWarning("Saved scene is unavailable; loading the default gameplay scene instead: " + targetScene, this);
             targetScene = GameSceneNames.Gameplay;
+            data.player.needsSceneSpawn = true;
         }
         StartCoroutine(TransitionTo(targetScene, GameInputMode.Gameplay));
     }

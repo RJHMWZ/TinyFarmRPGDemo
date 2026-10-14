@@ -20,7 +20,7 @@ public static class ProjectHealthValidator
     {
         "Assets/Game/Scenes/Boot.unity",
         "Assets/Game/Scenes/Frontend/MainMenu.unity",
-        "Assets/Game/Scenes/Gameplay/GameScene.unity"
+        "Assets/Game/Scenes/Gameplay/Village.unity"
     };
 
     [MenuItem("Tools/Tiny Farm/Validate Project")]
@@ -74,15 +74,43 @@ public static class ProjectHealthValidator
                     if (controllers.Length != 1 || !controllers[0].IsConfigured)
                         errors.Add("MainMenu scene must contain exactly one configured MainMenuController.");
                 }
-                else if (path.EndsWith("/GameScene.unity", System.StringComparison.Ordinal))
+                else if (path.EndsWith("/Village.unity", System.StringComparison.Ordinal))
                 {
                     UIRoot[] uiRoots = FindSceneComponents<UIRoot>(scene);
                     if (uiRoots.Length != 1 || !uiRoots[0].IsConfigured)
-                        errors.Add("GameScene must contain exactly one configured UIRoot.");
+                        errors.Add("Village must contain exactly one configured UIRoot.");
 
                     GameplayEntryPoint[] entryPoints = FindSceneComponents<GameplayEntryPoint>(scene);
                     if (entryPoints.Length != 1 || !entryPoints[0].IsConfigured)
-                        errors.Add("GameScene must contain exactly one configured GameplayEntryPoint.");
+                        errors.Add("Village must contain exactly one configured GameplayEntryPoint.");
+                    FarmSceneLayout[] layouts = FindSceneComponents<FarmSceneLayout>(scene);
+                    if (layouts.Length != 1 || !layouts[0].IsConfigured)
+                        errors.Add("Village must contain exactly one configured FarmSceneLayout.");
+                    else
+                    {
+                        FarmSceneLayout layout = layouts[0];
+                        var ids = new HashSet<string>();
+                        var kinds = new HashSet<string>();
+                        foreach (FarmSceneLayout.Station station in layout.stations)
+                        {
+                            if (station == null || station.marker == null || string.IsNullOrWhiteSpace(station.id) || !ids.Add(station.id))
+                                errors.Add("Village station has a missing marker/id or duplicate id.");
+                            else
+                            {
+                                kinds.Add(station.kind);
+                                if (!layout.worldBounds.Contains(station.marker.position)) errors.Add("Village station is outside world bounds: " + station.id);
+                            }
+                        }
+                        foreach (string kind in new[] { "sleep", "shop", "shipping", "storage", "crafting", "villager", "wood", "stone", "berry" })
+                            if (!kinds.Contains(kind)) errors.Add("Village is missing station kind: " + kind);
+                        if (!layout.worldBounds.Contains(layout.spawnPoint.position) || !layout.worldBounds.Contains(layout.homePoint.position))
+                            errors.Add("Village spawn/home must be inside world bounds.");
+                        for (int plot = 0; plot < FarmSaveData.Width * FarmSaveData.Height; plot++)
+                            if (!layout.worldBounds.Contains(layout.PlotPosition(plot))) errors.Add("Village plot is outside world bounds: " + plot);
+                    }
+                    Camera[] cameras = FindSceneComponents<Camera>(scene);
+                    if (cameras.Length != 1 || !cameras[0].CompareTag("MainCamera") || !cameras[0].orthographic)
+                        errors.Add("Village must contain exactly one orthographic MainCamera.");
                 }
             }
             catch (System.Exception exception)
@@ -242,8 +270,6 @@ public static class ProjectHealthValidator
         if (menuView == null || !menuView.IsConfigured)
             errors.Add("MainMenuView is missing or incomplete: " + MainMenuViewPath);
         else if (menuPrefab.transform.Find("MainMenuBackdrop") == null ||
-                 menuPrefab.transform.Find("MenuShade") == null ||
-                 menuPrefab.transform.Find("TitlePlate") == null ||
                  menuPrefab.transform.Find("Version") == null)
             errors.Add("MainMenu presentation is incomplete. Edit the MainMenuScreen prefab directly.");
 

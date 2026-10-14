@@ -32,9 +32,9 @@ Do not create another singular `Scene` folder or put game-owned editor tools in 
 
 ## Scene flow
 
-The player build starts in `Boot`. Its persistent `GameRoot` loads `MainMenu`, and the frontend loads `GameScene` only after a save has been created or loaded.
+The player build starts in `Boot`. Its persistent `GameRoot` loads `MainMenu`, and the frontend loads `Village` only after a save has been created or loaded.
 
-Keep title UI, save selection, and character creation outside gameplay scenes. Future world locations may be additive scenes while `GameScene` remains the persistent gameplay shell.
+Keep title UI, save selection, and character creation outside gameplay scenes. Village owns the authored tilemaps and scenery. `FarmSceneLayout` locates farm plots, stations, spawn/home markers, and world bounds; `FarmWorldView` adds the shared farming presentation without generating the demo map. The old `GameScene` is retained as a reference scene.
 
 ## Service boundaries
 
@@ -114,7 +114,7 @@ Reports are written to `Artifacts/CI`, which is intentionally excluded from vers
 The validator checks:
 
 - required scene paths and Build Settings order;
-- missing scripts and required controller references inside Boot, MainMenu, and GameScene;
+- missing scripts and required controller references inside Boot, MainMenu, and Village;
 - required `GameRoot` services;
 - character appearance, animation-frame layout, and name catalogs;
 - duplicate or incomplete UI panel registrations;

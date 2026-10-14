@@ -57,6 +57,57 @@ public sealed partial class FarmLoopPlayModeTests
         if (Directory.Exists(saveDirectory)) Directory.Delete(saveDirectory, true);
     }
     [UnityTest]
+    public IEnumerator Village_PreservesAuthoredMapAndRestoresTravelCheckpoint()
+    {
+        Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("Village"));
+        var farm = FarmRuntime.Active;
+        var layout = farm.Layout;
+        Assert.That(layout, Is.Not.Null);
+        Assert.That(layout.IsConfigured, Is.True);
+        Assert.That(GameObject.Find("Grid/Ground"), Is.Not.Null);
+        Assert.That(GameObject.Find("Buildings"), Is.Not.Null);
+        Assert.That(farm.transform.Find("FarmWorld/Grass"), Is.Null);
+        Assert.That(farm.transform.Find("FarmWorld/MainPath"), Is.Null);
+        Assert.That((Vector2)farm.Player.position, Is.EqualTo((Vector2)layout.spawnPoint.position));
+        Assert.That(farm.World.Targets.First(x => x.Kind == "plot").Position, Is.EqualTo(layout.PlotPosition(0)));
+        foreach (var station in layout.stations.Where(x => x.sceneRenderer != null))
+        {
+            var blockers = Physics2D.OverlapCircleAll(station.marker.position, 0.2f).Where(x => x.gameObject.layer != farm.Player.gameObject.layer).ToArray();
+            Assert.That(blockers, Is.Empty, station.id + " entrance must be outside building collision: " + station.sceneRenderer.bounds);
+        }
+        farm.Player.position = new Vector3(45, 0, 0);
+        farm.Player.GetComponent<Rigidbody2D>().position = farm.Player.position;
+        yield return new WaitForSeconds(0.25f);
+        Assert.That(Camera.main.transform.position.x, Is.GreaterThan(13), "The camera must follow past the demo map boundary.");
+        Assert.That(farm.SaveNow(false), Is.True);
+        Assert.That(root.Saves.TryLoad(0, out var loaded), Is.True);
+        Assert.That(loaded.world.currentScene, Is.EqualTo("Village"));
+        Assert.That(loaded.player.needsSceneSpawn, Is.False);
+        root.Session.SetLoadedGame(0, loaded);
+        yield return SceneManager.LoadSceneAsync(GameSceneNames.Gameplay);
+        yield return null;
+        Assert.That(FarmRuntime.Active.Player.position.x, Is.EqualTo(45).Within(0.1f));
+    }
+
+    [UnityTest]
+    public IEnumerator CharacterCreation_EntersVillageAtConfiguredSpawn()
+    {
+        var profile = root.Session.CurrentSave.player.appearance;
+        root.Session.ClearLoadedGame();
+        yield return SceneManager.LoadSceneAsync(GameSceneNames.MainMenu);
+        yield return null;
+        Assert.That(root.Flow.StartNewGame(profile), Is.True);
+        float deadline = Time.realtimeSinceStartup + 15;
+        while ((FarmRuntime.Active == null || root.InputModes.CurrentMode != GameInputMode.Gameplay) && Time.realtimeSinceStartup < deadline)
+            yield return null;
+        Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("Village"));
+        Assert.That(FarmRuntime.Active, Is.Not.Null);
+        Assert.That((Vector2)FarmRuntime.Active.Player.position, Is.EqualTo((Vector2)FarmRuntime.Active.Layout.spawnPoint.position));
+        Assert.That(root.Session.CurrentSave.player.appearance.playerName, Is.EqualTo(profile.playerName));
+        Capture("village-gameplay.png", 1600, 900);
+    }
+
+    [UnityTest]
     public IEnumerator World_HasFarmStationsAndRuntimeClock()
     {
         var farm = FarmRuntime.Active;
@@ -105,6 +156,49 @@ public sealed partial class FarmLoopPlayModeTests
         Assert.That(root.Pause.IsPaused, Is.False);
     }
     [UnityTest]
+    public IEnumerator InventoryPanels_OrganizeQuickStackAndRetrieveLatestShipment()
+    {
+        var game = FarmRuntime.Active.Game;
+        game.Save.inventory.slots[14].Set("wood", "Wood", 40);
+        game.Save.inventory.slots[22].Set("wood", "Wood", 80);
+        var panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "backpack" });
+        yield return null;
+        Click(panel, "Action2");
+        Assert.That(game.Save.inventory.slots[0].itemId, Is.EqualTo("hoe"));
+        Assert.That(game.Save.inventory.slots[4].count, Is.EqualTo(15));
+        Assert.That(game.Save.inventory.slots[12].count, Is.EqualTo(99));
+        Assert.That(game.Save.inventory.slots[13].count, Is.EqualTo(21));
+        Capture("farm-organized.png", 1024, 768);
+        root.UI.Close(FarmHubPanel.PanelId);
+
+        game.Storage.Add("wood", 1);
+        panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "storage" });
+        yield return null;
+        Click(panel, "Action2");
+        Assert.That(game.Inventory.Count("wood"), Is.Zero);
+        Assert.That(game.Storage.Count("wood"), Is.EqualTo(121));
+        Click(panel, "Action0"); Click(panel, "Action2");
+        Assert.That(game.Storage.Data.slots[0].count, Is.EqualTo(99));
+        Capture("farm-storage.png", 1280, 720);
+        root.UI.Close(FarmHubPanel.PanelId);
+
+        game.Save.inventory.slots[12].Set("parsnip", "Parsnip", 3);
+        panel = (FarmHubPanel)root.UI.Open(FarmHubPanel.PanelId, new FarmPanelArgs { page = "shipping" });
+        yield return null;
+        var undoButton = panel.GetComponentsInChildren<Button>(true).First(x => x.name == "Action2");
+        Assert.That(undoButton.interactable, Is.False);
+        Click(panel, "Slot12"); Click(panel, "Action1");
+        Assert.That(game.Inventory.Count("parsnip"), Is.Zero);
+        Assert.That(undoButton.interactable, Is.True);
+        Capture("farm-shipping-undo.png", 1600, 900);
+        Click(panel, "Action2");
+        Assert.That(game.Inventory.Count("parsnip"), Is.EqualTo(3));
+        Assert.That(game.Economy.PendingIncome, Is.Zero);
+        Assert.That(undoButton.interactable, Is.False);
+        root.UI.Close(FarmHubPanel.PanelId);
+        Assert.That(root.Pause.IsPaused, Is.False);
+    }
+    [UnityTest]
     public IEnumerator Sleeping_PersistsFarmAndReloadsSceneState()
     {
         var game = FarmRuntime.Active.Game;
@@ -117,6 +211,8 @@ public sealed partial class FarmLoopPlayModeTests
         Assert.That(root.Saves.TryLoad(0, out var loaded), Is.True);
         Assert.That(loaded.farm.plots[0].growth, Is.EqualTo(1));
         Assert.That(loaded.world.day, Is.EqualTo(2));
+        Assert.That(loaded.world.currentScene, Is.EqualTo("Village"));
+        Assert.That((Vector2)FarmRuntime.Active.Player.position, Is.EqualTo((Vector2)FarmRuntime.Active.Layout.homePoint.position));
         root.Session.SetLoadedGame(0, loaded);
         yield return SceneManager.LoadSceneAsync(GameSceneNames.Gameplay);
         yield return null;

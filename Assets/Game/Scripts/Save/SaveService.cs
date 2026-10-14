@@ -29,7 +29,7 @@ public sealed class SaveService
         public CharacterCreationProfile profile = null;
     }
 
-    private const int CurrentSaveVersion = 4;
+    private const int CurrentSaveVersion = 5;
     private const string SaveFolderName = "Saves";
     private const string SaveFilePattern = "save-slot-{0}.json";
     private const string LegacyFilePattern = "character-profile-slot-{0}.json";
@@ -190,12 +190,21 @@ public sealed class SaveService
 
     private static GameSaveData Migrate(GameSaveData data, int sourceVersion)
     {
-        // v2 introduced the gameplay envelope; v3 added inventory; v4 adds farm systems.
+        // v2 introduced the gameplay envelope; v3 added inventory; v4 added farm systems.
+        // v5 moves the default world to Village and adds a scene-spawn request.
         if (sourceVersion < 3 && data.inventory == null) data.inventory = InventorySaveData.CreateStarterInventory();
         if (sourceVersion < 4)
         {
             data.farm = new FarmSaveData();
             data.farm.Normalize();
+        }
+        if (sourceVersion < 5 && (data.world == null || string.IsNullOrWhiteSpace(data.world.currentScene) ||
+                                 data.world.currentScene == GameSceneNames.LegacyGameplay))
+        {
+            if (data.world == null) data.world = new WorldSaveData();
+            if (data.player == null) data.player = new PlayerSaveData();
+            data.world.currentScene = GameSceneNames.Gameplay;
+            data.player.needsSceneSpawn = true;
         }
         data.Normalize();
         data.version = CurrentSaveVersion;

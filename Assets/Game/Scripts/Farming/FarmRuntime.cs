@@ -10,6 +10,7 @@ public sealed class FarmRuntime : MonoBehaviour
     public Transform Player { get; private set; }
     public FarmWorldView World { get; private set; }
     public FarmActionFeedback ActionFeedback { get; private set; }
+    public FarmSceneLayout Layout { get; private set; }
     public string InteractionHint { get; internal set; }
     private float autosaveSeconds;
     public bool Initialize(Transform player)
@@ -20,6 +21,12 @@ public sealed class FarmRuntime : MonoBehaviour
         if (root == null || root.Session.CurrentSave == null || content == null)
         {
             Debug.LogError("FarmRuntime requires a loaded save and Resources/FarmContent. Run Tools > Tiny Farm > Build Farm Content.");
+            return false;
+        }
+        Layout = GetComponent<FarmSceneLayout>();
+        if (Layout != null && !Layout.IsConfigured)
+        {
+            Debug.LogError("FarmSceneLayout requires spawn, home, plot origin and playable bounds.", this);
             return false;
         }
         Active = this;
@@ -48,14 +55,18 @@ public sealed class FarmRuntime : MonoBehaviour
         if (Game == null || root == null || root.Session.CurrentSave != Game.Save) return false;
         Game.Save.player.positionX = Player.position.x;
         Game.Save.player.positionY = Player.position.y;
+        Game.Save.player.needsSceneSpawn = false;
         Game.Save.world.currentScene = SceneManager.GetActiveScene().name;
         bool saved = root.Saves.Save(root.Session.ActiveSlot, Game.Save);
-        if (feedback || !saved) Game.Execute(() => saved ? FarmResult.Ok("Game saved.") : FarmResult.Fail("Save failed. Your session is still open; please retry."));
+        if (feedback || !saved) Game.Execute(() => saved ? FarmResult.Ok("Game saved.") : FarmResult.Fail("Save failed. Your session is still open; please retry."), FarmChange.None);
         return saved;
     }
     private void OnDayEnded()
     {
-        Player.position = new Vector3(-4f, 3f, Player.position.z);
+        Vector2 home = Layout != null && Layout.IsConfigured ? (Vector2)Layout.homePoint.position : new Vector2(-4f, 3f);
+        Player.position = new Vector3(home.x, home.y, Player.position.z);
+        Rigidbody2D body = Player.GetComponent<Rigidbody2D>();
+        if (body != null) { body.position = home; body.velocity = Vector2.zero; }
         SaveNow(false);
     }
     private void OnApplicationPause(bool paused) { if (paused && Game != null) SaveNow(false); }

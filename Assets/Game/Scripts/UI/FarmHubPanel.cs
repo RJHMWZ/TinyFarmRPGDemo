@@ -97,6 +97,13 @@ public sealed class FarmHubPanel : UIPanel
     private void SelectPage(string id) { page = id; selection = -1; moveFrom = -1; pageNumber = 0; withdrawing = false; Refresh(); }
     private void SelectSlot(int index)
     {
+        if (Keyboard.current != null && Keyboard.current.shiftKey.isPressed)
+        {
+            selection = index;
+            moveFrom = -1;
+            if (page == "backpack") { game.EquipSlot(index); return; }
+            if (page == "storage") { TransferSelectedStack(); return; }
+        }
         if (page == "backpack")
         {
             if (moveFrom >= 0)
@@ -110,9 +117,7 @@ public sealed class FarmHubPanel : UIPanel
                 {
                     int source = moveFrom;
                     moveFrom = -1;
-                    bool moved = game.Inventory.Move(source, index);
-                    status.text = moved ? "Item placed." : "That item cannot be moved there.";
-                    if (moved) game.NotifyChanged();
+                    Execute(() => game.InventoryActions.Move(source, index));
                 }
                 selection = index;
                 Refresh();
@@ -143,39 +148,27 @@ public sealed class FarmHubPanel : UIPanel
                 FarmItem item = game.Content.Item(slot.itemId);
                 if (slot.IsEmpty) { status.text = "Empty slot."; break; }
                 if (item != null && item.kind == FarmItemKind.Food)
-                    game.Execute(() => game.Economy.Eat(index));
-                else if (index < 12)
-                    game.SelectHotbarSlot(index);
+                    Execute(() => game.Economy.Eat(index));
                 else
-                {
-                    int hotbar = game.Save.inventory.selectedHotbarSlot;
-                    if (game.Inventory.Move(index, hotbar))
-                    {
-                        game.SelectHotbarSlot(hotbar);
-                        status.text = "Equipped to the active hotbar slot.";
-                    }
-                    else status.text = "Could not equip that item.";
-                }
+                    game.EquipSlot(index);
                 break;
             case "shipping":
-                game.Execute(() => game.Economy.Ship(index, 1));
+                Execute(() => game.Economy.Ship(index, 1));
                 break;
             case "storage":
-                TransferSelectedStack();
+                TransferSelectedStack(Keyboard.current != null && Keyboard.current.shiftKey.isPressed);
                 break;
             default:
                 Refresh();
                 break;
         }
     }
-    private void TransferSelectedStack()
+    private void TransferSelectedStack() => TransferSelectedStack(false);
+    private void TransferSelectedStack(bool halfStack)
     {
-        if (selection < 0) return;
-        InventoryService source = CurrentInventory;
-        game.Execute(() => source.TransferTo(withdrawing ? game.Inventory : game.Storage, selection, source.Data.slots[selection].count)
-            ? FarmResult.Ok("Stack transferred.")
-            : FarmResult.Fail("Transfer failed. Check available space."));
+        Execute(() => game.InventoryActions.Transfer(withdrawing, selection, halfStack));
     }
+    private FarmResult Execute(Func<FarmResult> command) => game.Execute(command, FarmChange.Inventory | FarmChange.Progression);
     private InventoryService CurrentInventory => page == "storage" && withdrawing ? game.Storage : game.Inventory;
     private void Refresh()
     {
@@ -202,19 +195,14 @@ public sealed class FarmHubPanel : UIPanel
         {
             case "backpack":
                 title.text = "BACKPACK";
-                detail.text += "\n\nLeft click picks up and places a stack. Right click equips tools/seeds or eats food. The first 12 slots are your hotbar.";
-                ActionButton("EAT", () => { moveFrom = -1; game.Execute(() => game.Economy.Eat(selection)); });
+                detail.text += "\n\nLeft click picks up and places a stack. Right click equips tools/seeds or eats food. Shift + click equips. Organize keeps the first 12 hotbar slots untouched.";
+                ActionButton("EAT", () => { moveFrom = -1; Execute(() => game.Economy.Eat(selection)); });
                 ActionButton("EQUIP", () =>
                 {
-                    if (selection < 0) return;
                     moveFrom = -1;
-                    if (selection >= 12)
-                    {
-                        int hotbar = game.Save.inventory.selectedHotbarSlot;
-                        if (game.Inventory.Move(selection, hotbar)) game.SelectHotbarSlot(hotbar);
-                    }
-                    else game.SelectHotbarSlot(selection);
+                    game.EquipSlot(selection);
                 });
+                ActionButton("ORGANIZE", () => { moveFrom = -1; selection = -1; Execute(game.InventoryActions.OrganizeBackpack); });
                 break;
             case "shop":
                 title.text = "WILLOW SEED SHOP";
@@ -225,20 +213,29 @@ public sealed class FarmHubPanel : UIPanel
                     var crop = game.Content.Crop(item.id);
                     if (crop != null && !crop.InSeason(game.Save.world.season)) continue;
                     string id = item.id;
-                    Row(item.title + "   " + item.buyPrice + "g\n" + item.description, () => game.Execute(() => game.Economy.Buy(id, 1)));
+                    Row(item.title + "   " + item.buyPrice + "g\n" + item.description, () => Execute(() => game.Economy.Buy(id, 1)));
                 }
                 break;
             case "shipping":
                 title.text = "SHIPPING BIN";
-                detail.text += "\n\nPending payment: " + game.Economy.PendingIncome + "g\nRight click ships one. Shipped items are sold when you sleep.";
-                ActionButton("SHIP 1", () => game.Execute(() => game.Economy.Ship(selection, 1)));
-                ActionButton("SHIP STACK", () => { int count = selection >= 0 ? game.Inventory.Data.slots[selection].count : 0; game.Execute(() => game.Economy.Ship(selection, count)); });
+                detail.text += "\n\nPending payment: " + game.Economy.PendingIncome + "g\nRight click ships one. Payment arrives after sleep. Only the latest shipment can be retrieved.";
+                var recent = game.Economy.RecoverableShipment;
+                if (recent != null) detail.text += "\nRetrieve: " + (game.Content.Item(recent.itemId)?.title ?? recent.itemId) + " x" + recent.count;
+                ActionButton("SHIP 1", () => Execute(() => game.Economy.Ship(selection, 1)));
+                ActionButton("SHIP STACK", () => { int count = selection >= 0 ? game.Inventory.Data.slots[selection].count : 0; Execute(() => game.Economy.Ship(selection, count)); });
+                ActionButton("UNDO LAST", () => Execute(game.Economy.UndoLastShipment));
+                actions[actionCommands.Count - 1].interactable = recent != null;
                 break;
             case "storage":
                 title.text = withdrawing ? "STORAGE > BACKPACK" : "BACKPACK > STORAGE";
-                detail.text += "\n\nRight click transfers a stack. Both inventories are saved with your farm.";
+                detail.text += "\n\nRight click or Shift + click transfers a stack. Shift + right click transfers half. Quick Stack deposits matching items, keeping tools. Switch to Withdraw View to organize storage.";
                 ActionButton(withdrawing ? "DEPOSIT VIEW" : "WITHDRAW VIEW", () => { withdrawing = !withdrawing; selection = -1; Refresh(); });
                 ActionButton("TRANSFER STACK", TransferSelectedStack);
+                ActionButton(withdrawing ? "ORGANIZE" : "QUICK STACK", () =>
+                {
+                    selection = -1;
+                    Execute(withdrawing ? (Func<FarmResult>)game.InventoryActions.OrganizeStorage : game.InventoryActions.QuickStack);
+                });
                 break;
             case "crafting":
                 title.text = "CRAFTING";
@@ -248,7 +245,7 @@ public sealed class FarmHubPanel : UIPanel
                     string id = recipe.id;
                     var text = new StringBuilder(recipe.title + "   Lv." + recipe.requiredLevel + "\n");
                     foreach (var part in recipe.ingredients) text.Append(game.Content.Item(part.itemId)?.title).Append(' ').Append(game.Inventory.Count(part.itemId)).Append('/').Append(part.count).Append("   ");
-                    Row(text.ToString(), () => game.Execute(() => game.Economy.Craft(id)));
+                    Row(text.ToString(), () => Execute(() => game.Economy.Craft(id)));
                 }
                 break;
             case "journal":
@@ -258,15 +255,15 @@ public sealed class FarmHubPanel : UIPanel
                 {
                     string id = quest.id;
                     string state = game.Progression.Completed(id) ? "CLAIMED" : !game.Progression.Available(quest) ? "LOCKED" : Mathf.Min(game.Progression.Counter(quest.counter), quest.target) + "/" + quest.target;
-                    Row(quest.title + "  [" + state + "]   +" + quest.goldReward + "g\n" + quest.description, () => game.Execute(() => game.Progression.Claim(id)));
+                    Row(quest.title + "  [" + state + "]   +" + quest.goldReward + "g\n" + quest.description, () => Execute(() => game.Progression.Claim(id)));
                 }
                 break;
             case "villager":
                 var npc = game.Content.Npc(npcId);
                 title.text = npc != null ? npc.title.ToUpperInvariant() : "VILLAGER";
                 if (npc != null) detail.text += "\n\nFriendship: " + game.Progression.Social(npcId).friendship + "/1000\nTalk and give one gift each day.\nFavorite: " + game.Content.Item(npc.favoriteItem)?.title;
-                ActionButton("TALK", () => game.Execute(() => game.Progression.Talk(npcId)));
-                ActionButton("GIVE SELECTED", () => game.Execute(() => game.Progression.Gift(npcId, selection, game.Inventory)));
+                ActionButton("TALK", () => Execute(() => game.Progression.Talk(npcId)));
+                ActionButton("GIVE SELECTED", () => Execute(() => game.Progression.Gift(npcId, selection, game.Inventory)));
                 break;
             case "sleep":
                 title.text = "END THE DAY?";
@@ -308,6 +305,6 @@ public sealed class FarmHubPanel : UIPanel
     {
         int index = actionCommands.Count;
         if (index >= actions.Length) return;
-        actionCommands.Add(command); actions[index].gameObject.SetActive(true); actionLabels[index].text = label;
+        actionCommands.Add(command); actions[index].gameObject.SetActive(true); actions[index].interactable = true; actionLabels[index].text = label;
     }
 }

@@ -9,6 +9,7 @@ public sealed class FarmSaveData
     public FarmPlotData[] plots = new FarmPlotData[Width * Height];
     public InventorySaveData storage = new InventorySaveData();
     public List<FarmShipment> shipments = new List<FarmShipment>();
+    public bool lastShipmentRecoverable;
     public List<FarmCounter> counters = new List<FarmCounter>();
     public List<FarmNodeState> resources = new List<FarmNodeState>();
     public List<FarmSocialState> villagers = new List<FarmSocialState>();
@@ -39,6 +40,7 @@ public sealed class FarmSaveData
         if (resources == null) resources = new List<FarmNodeState>();
         if (villagers == null) villagers = new List<FarmSocialState>();
         shipments.RemoveAll(x => x == null || string.IsNullOrEmpty(x.itemId) || x.count <= 0);
+        if (shipments.Count == 0) lastShipmentRecoverable = false;
         counters.RemoveAll(x => x == null || string.IsNullOrEmpty(x.id));
         resources.RemoveAll(x => x == null || string.IsNullOrEmpty(x.id));
         villagers.RemoveAll(x => x == null || string.IsNullOrEmpty(x.id));
